@@ -28,3 +28,7 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+## Project rules
+- Screens use `src/components/field/AppShell` + `FieldButton` so all screens share layout and tap-size rules; theme tokens live only in `src/styles.css`.
+- Prototype data is hardcoded in `src/data/` until a backend is added.

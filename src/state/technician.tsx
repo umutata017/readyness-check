@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { jobs as seedJobs, technicians, type Job } from "@/data/jobs";
+import { jobs as seedJobs, technicians, type Job, type UpdateEntry } from "@/data/jobs";
 import {
   createJob as storeCreateJob,
   editJob as storeEditJob,
@@ -9,7 +9,6 @@ import {
   reassignJob as storeReassignJob,
   type JobChanges,
   type NewJobInput,
-  type UpdateEntry,
 } from "@/data/store";
 
 const STORAGE_KEY = "advantiq-demo-state";

@@ -3,20 +3,15 @@ import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, Clock, MapPin, User
 import { AppShell } from "@/components/field/AppShell";
 import { FieldButton } from "@/components/field/FieldButton";
 import { JobActions } from "@/components/field/JobActions";
-import { getJob } from "@/data/jobs";
+import { openEntries } from "@/data/store";
 import { useTechnician } from "@/state/technician";
 
 export const Route = createFileRoute("/job/$jobId")({
-  loader: ({ params }) => {
-    const job = getJob(params.jobId);
-    if (!job) throw notFound();
-    return job;
-  },
-  head: ({ loaderData }) => ({
+  head: ({ params }) => ({
     meta: [
-      { title: `${loaderData?.project ?? "Job"} — AdvantiQ` },
+      { title: `Job ${params.jobId} — AdvantiQ` },
       { name: "description", content: "Job details, tasks and latest changes for the on-site technician." },
-      { property: "og:title", content: `${loaderData?.project ?? "Job"} — AdvantiQ` },
+      { property: "og:title", content: `Job ${params.jobId} — AdvantiQ` },
       { property: "og:description", content: "Job details, tasks and latest changes for the on-site technician." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -26,10 +21,15 @@ export const Route = createFileRoute("/job/$jobId")({
 });
 
 function JobDetail() {
-  const job = Route.useLoaderData();
-  const { isUpdateSeen, markUpdateSeen } = useTechnician();
-  const seen = isUpdateSeen(job);
-  const u = job.update;
+  const { jobId } = Route.useParams();
+  const { getJob, markUpdateSeen } = useTechnician();
+  const job = getJob(jobId);
+  if (!job) throw notFound();
+
+  const open = openEntries(job);
+  const seen = open.length === 0;
+  const changedTaskIds = new Set(open.map((e) => e.taskId).filter(Boolean));
+  const latest = job.history.at(-1);
 
   return (
     <AppShell
@@ -56,20 +56,20 @@ function JobDetail() {
             <li
               key={t.id}
               className={
-                t.changed && !seen
+                changedTaskIds.has(t.id)
                   ? "flex items-center gap-4 rounded-2xl border-2 border-change bg-change-surface p-4"
                   : "flex items-center gap-4 rounded-2xl bg-card p-4"
               }
             >
-              <span className={t.changed && !seen ? "grid size-9 shrink-0 place-items-center rounded-full bg-change font-bold text-change-foreground" : "grid size-9 shrink-0 place-items-center rounded-full bg-secondary font-bold"}>{i + 1}</span>
+              <span className={changedTaskIds.has(t.id) ? "grid size-9 shrink-0 place-items-center rounded-full bg-change font-bold text-change-foreground" : "grid size-9 shrink-0 place-items-center rounded-full bg-secondary font-bold"}>{i + 1}</span>
               <span className="text-lg font-semibold leading-snug">{t.label}</span>
-              {t.changed && !seen && <AlertTriangle className="ml-auto size-6 shrink-0 text-change" aria-label="Changed" />}
+              {changedTaskIds.has(t.id) && <AlertTriangle className="ml-auto size-6 shrink-0 text-change" aria-label="Changed" />}
             </li>
           ))}
         </ol>
       </section>
 
-      {u && (
+      {(open.length > 0 || latest) && (
         <section
           className={seen ? "rounded-3xl border-2 border-success bg-card p-5" : "rounded-3xl border-2 border-change bg-change-surface p-5"}
           aria-live="polite"
@@ -78,15 +78,27 @@ function JobDetail() {
             {seen ? <CheckCircle2 className="size-6 text-success" /> : <AlertTriangle className="size-6 text-change" />}
             <h2 className="font-display text-xl">{seen ? "Update confirmed" : "Update"}</h2>
           </div>
-          <p className="mt-3 text-sm font-bold uppercase tracking-wider text-muted-foreground">{u.field}</p>
-          <div className="mt-2 flex flex-wrap items-center gap-3 text-lg font-bold">
-            <span className="text-muted-foreground line-through">{u.oldValue}</span>
-            <ArrowRight className="size-5" />
-            <span className={seen ? "text-foreground" : "text-change-foreground"}>{u.newValue}</span>
-          </div>
-          <FieldButton className="mt-5" variant={seen ? "success" : "primary"} onClick={() => markUpdateSeen(job.id)} disabled={seen}>
-            {seen ? <><CheckCircle2 className="size-6" /> Seen</> : "Seen"}
-          </FieldButton>
+          {(seen ? [latest!] : open).map((u) => (
+            <div key={u.id} className="mt-3">
+              <p className="text-sm font-bold uppercase tracking-wider text-muted-foreground">{u.field}</p>
+              <div className="mt-1 flex flex-wrap items-center gap-3 text-lg font-bold">
+                {u.oldValue && <span className="text-muted-foreground line-through">{u.oldValue}</span>}
+                {u.oldValue && <ArrowRight className="size-5" />}
+                <span className={seen ? "text-foreground" : "text-change-foreground"}>{u.newValue}</span>
+              </div>
+              {u.message && <p className="mt-1 text-base font-semibold text-muted-foreground">“{u.message}”</p>}
+            </div>
+          ))}
+          {!seen && (
+            <FieldButton className="mt-5" variant="primary" onClick={() => markUpdateSeen(job.id)}>
+              Seen
+            </FieldButton>
+          )}
+          {seen && (
+            <FieldButton className="mt-5" variant="success" disabled>
+              <CheckCircle2 className="size-6" /> Seen
+            </FieldButton>
+          )}
         </section>
       )}
 

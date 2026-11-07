@@ -19,11 +19,11 @@ const statusStyle: Record<DisplayStatus, string> = {
   done: "bg-muted text-muted-foreground",
 };
 
-export function JobCard({ job, status }: { job: Job; status: DisplayStatus }) {
+export function JobCard({ job, status, detailPath = "/job/$jobId" }: { job: Job; status: DisplayStatus; detailPath?: "/job/$jobId" | "/supervisor/job/$jobId" }) {
   const updated = status === "updated";
   return (
     <Link
-      to="/job/$jobId"
+      to={detailPath}
       params={{ jobId: job.id }}
       className={cn(
         "block rounded-3xl bg-card p-5 transition active:scale-[0.98]",

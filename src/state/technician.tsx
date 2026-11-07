@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { technicians, type Job } from "@/data/jobs";
 
 const STORAGE_KEY = "advantiq-demo-state";
+const DEFAULT_TECHNICIAN_ID = "tech-a";
 
 type DemoState = { technicianId: string; seenUpdates: Record<string, boolean> };
 

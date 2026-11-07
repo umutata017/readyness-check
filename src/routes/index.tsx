@@ -1,8 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { CheckCircle2, ChevronDown } from "lucide-react";
 import { JobCard, type DisplayStatus } from "@/components/field/JobCard";
 import { UpdateBanner } from "@/components/field/UpdateBanner";
-import { jobsForTechnician, technicians, type Job } from "@/data/jobs";
+import { technicians, type Job } from "@/data/jobs";
 import { useTechnician } from "@/state/technician";
 
 export const Route = createFileRoute("/")({
@@ -19,15 +19,16 @@ export const Route = createFileRoute("/")({
   component: HomeScreen,
 });
 
-function displayStatus(job: Job, updateSeen: boolean): DisplayStatus {
-  if (job.update && !updateSeen) return "updated";
+function displayStatus(job: Job, hasOpenUpdate: boolean): DisplayStatus {
+  if (hasOpenUpdate) return "updated";
   return job.status;
 }
 
 function HomeScreen() {
-  const { technicianId, setTechnicianId, isUpdateSeen } = useTechnician();
-  const myJobs = jobsForTechnician(technicianId);
-  const updatedJob = myJobs.find((j) => j.update && !isUpdateSeen(j));
+  const { technicianId, setTechnicianId, jobs, openUpdate } = useTechnician();
+  const navigate = useNavigate();
+  const myJobs = jobs.filter((j) => j.technicianId === technicianId);
+  const updatedJob = myJobs.find((j) => openUpdate(j));
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-background">
@@ -36,10 +37,16 @@ function HomeScreen() {
         <div className="flex items-center justify-between gap-3">
           <span className="font-display text-lg tracking-widest text-primary">ADVANTIQ</span>
           <label className="relative flex items-center">
-            <span className="sr-only">Choose technician</span>
+            <span className="sr-only">Choose technician or supervisor</span>
             <select
               value={technicianId}
-              onChange={(e) => setTechnicianId(e.target.value)}
+              onChange={(e) => {
+                if (e.target.value === "supervisor") {
+                  navigate({ to: "/supervisor" });
+                } else {
+                  setTechnicianId(e.target.value);
+                }
+              }}
               className="min-h-tap appearance-none rounded-2xl bg-secondary py-2 pl-4 pr-10 text-base font-bold text-secondary-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring"
             >
               {technicians.map((t) => (
@@ -47,6 +54,7 @@ function HomeScreen() {
                   {t.name}
                 </option>
               ))}
+              <option value="supervisor">Supervisor</option>
             </select>
             <ChevronDown className="pointer-events-none absolute right-3 size-5 text-muted-foreground" aria-hidden />
           </label>
@@ -65,7 +73,7 @@ function HomeScreen() {
         <section className="space-y-3">
           <h2 className="text-sm font-extrabold uppercase tracking-widest text-muted-foreground">My jobs</h2>
           {myJobs.map((job) => (
-            <JobCard key={job.id} job={job} status={displayStatus(job, isUpdateSeen(job))} />
+            <JobCard key={job.id} job={job} status={displayStatus(job, Boolean(openUpdate(job)))} />
           ))}
         </section>
       </main>

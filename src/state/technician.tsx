@@ -16,7 +16,7 @@ type TechnicianContextValue = {
 const TechnicianContext = createContext<TechnicianContextValue | null>(null);
 
 function readStoredState(): DemoState {
-  const fallback: DemoState = { technicianId: technicians[0].id, seenUpdates: {} };
+  const fallback: DemoState = { technicianId: DEFAULT_TECHNICIAN_ID, seenUpdates: {} };
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return fallback;
@@ -32,7 +32,7 @@ function readStoredState(): DemoState {
 
 export function TechnicianProvider({ children }: { children: ReactNode }) {
   // SSR-safe: start from the default, then hydrate from localStorage after mount.
-  const [state, setState] = useState<DemoState>({ technicianId: technicians[0].id, seenUpdates: {} });
+  const [state, setState] = useState<DemoState>({ technicianId: DEFAULT_TECHNICIAN_ID, seenUpdates: {} });
 
   useEffect(() => {
     setState(readStoredState());

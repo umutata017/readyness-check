@@ -1,96 +1,74 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { AlertTriangle, ArrowRight, CheckCircle2, Clock, ClipboardCheck, MapPin, Navigation, Phone, User } from "lucide-react";
-import { AppShell } from "@/components/field/AppShell";
-import { FieldButton } from "@/components/field/FieldButton";
-import { currentJob } from "@/data/job";
+import { CheckCircle2, ChevronDown } from "lucide-react";
+import { JobCard, type DisplayStatus } from "@/components/field/JobCard";
+import { UpdateBanner } from "@/components/field/UpdateBanner";
+import { jobsForTechnician, technicians, type Job } from "@/data/jobs";
+import { useTechnician } from "@/state/technician";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Job overview — AdvantiQ" },
-      { name: "description", content: "Today's job, tasks and latest changes for the on-site technician." },
-      { property: "og:title", content: "Job overview — AdvantiQ" },
-      { property: "og:description", content: "Today's job, tasks and latest changes for the on-site technician." },
+      { title: "My jobs — AdvantiQ" },
+      { name: "description", content: "Today's jobs and updates for the on-site technician." },
+      { property: "og:title", content: "My jobs — AdvantiQ" },
+      { property: "og:description", content: "Today's jobs and updates for the on-site technician." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: JobOverview,
+  component: HomeScreen,
 });
 
-function JobOverview() {
-  const job = currentJob;
-  const [seen, setSeen] = useState(false);
-  const u = job.update;
-
-  return (
-    <AppShell
-      title={job.project}
-      eyebrow={job.id}
-      bottom={
-        <div className="grid grid-cols-3 gap-3">
-          <FieldButton variant="tile"><Navigation className="size-6" />Route</FieldButton>
-          <FieldButton variant="tile"><ClipboardCheck className="size-6" />Checklist</FieldButton>
-          <FieldButton variant="tile"><Phone className="size-6" />Supervisor</FieldButton>
-        </div>
-      }
-    >
-      <section className="space-y-3 rounded-3xl bg-card p-5 text-lg">
-        <Info icon={<User className="size-5" />} text={job.customer} />
-        <Info icon={<MapPin className="size-5" />} text={job.address} />
-        <Info icon={<Clock className="size-5" />} text={job.timeslot} strong />
-      </section>
-
-      <section>
-        <h2 className="mb-3 text-sm font-extrabold uppercase tracking-widest text-muted-foreground">Tasks</h2>
-        <ol className="space-y-2">
-          {job.tasks.map((t, i) => (
-            <li
-              key={t.id}
-              className={
-                t.changed && !seen
-                  ? "flex items-center gap-4 rounded-2xl border-2 border-change bg-change-surface p-4"
-                  : "flex items-center gap-4 rounded-2xl bg-card p-4"
-              }
-            >
-              <span className={t.changed && !seen ? "grid size-9 shrink-0 place-items-center rounded-full bg-change font-bold text-change-foreground" : "grid size-9 shrink-0 place-items-center rounded-full bg-secondary font-bold"}>{i + 1}</span>
-              <span className="text-lg font-semibold leading-snug">{t.label}</span>
-              {t.changed && !seen && <AlertTriangle className="ml-auto size-6 shrink-0 text-change" aria-label="Changed" />}
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      {u && (
-        <section
-          className={seen ? "rounded-3xl border-2 border-success bg-card p-5" : "rounded-3xl border-2 border-change bg-change-surface p-5"}
-          aria-live="polite"
-        >
-          <div className="flex items-center gap-2">
-            {seen ? <CheckCircle2 className="size-6 text-success" /> : <AlertTriangle className="size-6 text-change" />}
-            <h2 className="font-display text-xl">{seen ? "Update confirmed" : "Update"}</h2>
-          </div>
-          <p className="mt-3 text-sm font-bold uppercase tracking-wider text-muted-foreground">{u.field}</p>
-          <div className="mt-2 flex flex-wrap items-center gap-3 text-lg font-bold">
-            <span className="text-muted-foreground line-through">{u.oldValue}</span>
-            <ArrowRight className="size-5" />
-            <span className={seen ? "text-foreground" : "text-change-foreground"}>{u.newValue}</span>
-          </div>
-          <FieldButton className="mt-5" variant={seen ? "success" : "primary"} onClick={() => setSeen(true)} disabled={seen}>
-            {seen ? <><CheckCircle2 className="size-6" /> Seen</> : "Seen"}
-          </FieldButton>
-        </section>
-      )}
-    </AppShell>
-  );
+function displayStatus(job: Job, updateSeen: boolean): DisplayStatus {
+  if (job.update && !updateSeen) return "updated";
+  return job.status;
 }
 
-function Info({ icon, text, strong }: { icon: React.ReactNode; text: string; strong?: boolean }) {
+function HomeScreen() {
+  const { technicianId, setTechnicianId, isUpdateSeen } = useTechnician();
+  const myJobs = jobsForTechnician(technicianId);
+  const updatedJob = myJobs.find((j) => j.update && !isUpdateSeen(j));
+
   return (
-    <div className="flex items-center gap-3">
-      <span className="text-primary">{icon}</span>
-      <span className={strong ? "font-bold text-primary" : "font-semibold"}>{text}</span>
+    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-background">
+      <div className="hazard-stripe h-2" aria-hidden />
+      <header className="px-gutter pb-4 pt-5">
+        <div className="flex items-center justify-between gap-3">
+          <span className="font-display text-lg tracking-widest text-primary">ADVANTIQ</span>
+          <label className="relative flex items-center">
+            <span className="sr-only">Choose technician</span>
+            <select
+              value={technicianId}
+              onChange={(e) => setTechnicianId(e.target.value)}
+              className="min-h-tap appearance-none rounded-2xl bg-secondary py-2 pl-4 pr-10 text-base font-bold text-secondary-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring"
+            >
+              {technicians.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-3 size-5 text-muted-foreground" aria-hidden />
+          </label>
+        </div>
+      </header>
+
+      <main className="flex-1 space-y-5 px-gutter pb-6">
+        {updatedJob ? (
+          <UpdateBanner job={updatedJob} />
+        ) : (
+          <p className="flex items-center gap-2 rounded-2xl bg-card px-4 py-3 text-sm font-semibold text-muted-foreground">
+            <CheckCircle2 className="size-5 text-success" /> No new updates
+          </p>
+        )}
+
+        <section className="space-y-3">
+          <h2 className="text-sm font-extrabold uppercase tracking-widest text-muted-foreground">My jobs</h2>
+          {myJobs.map((job) => (
+            <JobCard key={job.id} job={job} status={displayStatus(job, isUpdateSeen(job))} />
+          ))}
+        </section>
+      </main>
     </div>
   );
 }

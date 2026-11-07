@@ -11,10 +11,10 @@ export type UpdateEntry = {
   field: string;
   oldValue: string;
   newValue: string;
-  taskId?: string;
-  message?: string;
+  taskId?: string | undefined;
+  message?: string | undefined;
   notify: boolean; // whether the technician gets a banner for this update
-  seenAt?: string; // set when the technician taps "Seen"
+  seenAt?: string | undefined; // set when the technician taps "Seen"
 };
 export type Job = {
   id: string;

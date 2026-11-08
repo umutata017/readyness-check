@@ -126,13 +126,20 @@ export function editJob(
       const oldLabels = job.tasks.map((t) => t.label).join("; ");
       const newLabels = changes.tasks.filter(Boolean).join("; ");
       if (oldLabels !== newLabels) {
-        entries.push({ id: uid("u"), at, ...base, field: "Tasks", oldValue: oldLabels, newValue: newLabels });
         next.tasks = changes.tasks.filter(Boolean).map((label, i) => ({ id: `t${i + 1}`, label }));
+        const count = Math.max(job.tasks.length, next.tasks.length);
+        for (let i = 0; i < count; i += 1) {
+          const oldTask = job.tasks[i];
+          const newTask = next.tasks[i];
+          if (oldTask?.label !== newTask?.label) {
+            entries.push({ id: uid("u"), at, ...base, field: "Task", oldValue: oldTask?.label ?? "", newValue: newTask?.label ?? "Removed", taskId: newTask?.id });
+          }
+        }
       }
     }
     if (changes.items) {
-      const oldLabels = job.items.map((it) => it.label).join("; ");
-      const newLabels = changes.items.filter((it) => it.label).map((it) => it.label).join("; ");
+      const oldLabels = job.items.map((it) => `${it.label} (${it.kind})`).join("; ");
+      const newLabels = changes.items.filter((it) => it.label).map((it) => `${it.label} (${it.kind})`).join("; ");
       if (oldLabels !== newLabels) {
         entries.push({ id: uid("u"), at, ...base, field: "Required items", oldValue: oldLabels, newValue: newLabels });
         next.items = changes.items.filter((it) => it.label).map((it, i) => ({ id: `i${i + 1}`, label: it.label, kind: it.kind }));

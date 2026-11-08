@@ -22,8 +22,9 @@ export const Route = createFileRoute("/job/$jobId")({
 
 function JobDetail() {
   const { jobId } = Route.useParams();
-  const { getJob, markUpdateSeen } = useTechnician();
+  const { getJob, markUpdateSeen, hydrated } = useTechnician();
   const job = getJob(jobId);
+  if (!job && !hydrated) return <AppShell title="Loading job…" />;
   if (!job) throw notFound();
 
   const open = openEntries(job);
@@ -78,7 +79,7 @@ function JobDetail() {
             {seen ? <CheckCircle2 className="size-6 text-success" /> : <AlertTriangle className="size-6 text-change" />}
             <h2 className="font-display text-xl">{seen ? "Update confirmed" : "Update"}</h2>
           </div>
-          {(seen ? [latest!] : open).map((u) => (
+          {(seen ? (latest ? [latest] : []) : open).map((u) => (
             <div key={u.id} className="mt-3">
               <p className="text-sm font-bold uppercase tracking-wider text-muted-foreground">{u.field}</p>
               <div className="mt-1 flex flex-wrap items-center gap-3 text-lg font-bold">

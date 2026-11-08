@@ -1,5 +1,6 @@
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
+import { FieldButton } from "./FieldButton";
 
 /** Shared glove-friendly form controls for the supervisor screens. */
 
@@ -24,7 +25,7 @@ export function FieldSelect({ className, children, ...props }: SelectHTMLAttribu
 
 export function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
-    <button
+    <FieldButton
       type="button"
       role="switch"
       aria-checked={checked}
@@ -45,6 +46,6 @@ export function Toggle({ checked, onChange, label }: { checked: boolean; onChang
           )}
         />
       </span>
-    </button>
+    </FieldButton>
   );
 }

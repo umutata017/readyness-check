@@ -38,8 +38,9 @@ export function TaskListEditor({ tasks, onChange }: { tasks: string[]; onChange:
         ))}
         <FieldButton
           type="button"
+          variant="tile"
           onClick={() => onChange([...tasks, ""])}
-          className="flex min-h-tap w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border px-4 py-3 text-base font-bold text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring"
+          className="min-h-tap flex-row border-2 border-dashed border-border px-4 py-3 text-base"
         >
           <Plus className="size-5" /> Add task
         </FieldButton>
@@ -88,8 +89,9 @@ export function ItemListEditor({ items, onChange }: { items: ItemDraft[]; onChan
         ))}
         <FieldButton
           type="button"
+          variant="tile"
           onClick={() => onChange([...items, { label: "", kind: "equipment" }])}
-          className="flex min-h-tap w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border px-4 py-3 text-base font-bold text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring"
+          className="min-h-tap flex-row border-2 border-dashed border-border px-4 py-3 text-base"
         >
           <Plus className="size-5" /> Add item
         </FieldButton>

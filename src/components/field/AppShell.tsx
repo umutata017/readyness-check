@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 /** Shared mobile screen frame: top bar, scrollable body, sticky bottom action bar. `wide` lets supervisor screens use more room on a laptop. */
-export function AppShell({ title, eyebrow, children, bottom, wide }: { title: string; eyebrow?: string; children: ReactNode; bottom?: ReactNode; wide?: boolean }) {
+export function AppShell({ title, eyebrow, children, bottom, wide }: { title: string; eyebrow?: string; children?: ReactNode; bottom?: ReactNode; wide?: boolean }) {
   return (
     <div className={`mx-auto flex min-h-dvh w-full flex-col bg-background ${wide ? "max-w-md sm:max-w-3xl" : "max-w-md"}`}>
       <div className="hazard-stripe h-2" aria-hidden />

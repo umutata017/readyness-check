@@ -7,7 +7,10 @@ import {
   getJobs,
   latestOpenEntry,
   markJobUpdatesSeen,
+  markJobReady,
   openEntries,
+  updateRequiredItem,
+  updateWorkspaceAvailability,
   reassignJob as storeReassignJob,
   resetDemoData as storeResetDemoData,
   type JobChanges,
@@ -27,6 +30,13 @@ type TechnicianContextValue = {
   isUpdateSeen: (job: Job) => boolean;
   openUpdate: (job: Job) => UpdateEntry | undefined;
   markUpdateSeen: (jobId: string) => Promise<void>;
+  updateRequiredItem: (
+    jobId: string,
+    itemId: string,
+    status: "unknown" | "available" | "missing",
+  ) => Promise<void>;
+  updateWorkspaceAvailability: (jobId: string, available: boolean) => Promise<void>;
+  markJobReady: (jobId: string) => Promise<void>;
   createJob: (input: NewJobInput) => Promise<Job>;
   editJob: (
     id: string,
@@ -136,6 +146,11 @@ export function TechnicianProvider({ children }: { children: ReactNode }) {
     isUpdateSeen: (job) => openEntries(job).length === 0,
     openUpdate: (job) => latestOpenEntry(job),
     markUpdateSeen: (jobId) => runMutation(() => markJobUpdatesSeen(jobId)),
+    updateRequiredItem: (jobId, itemId, status) =>
+      runMutation(() => updateRequiredItem(jobId, itemId, status)),
+    updateWorkspaceAvailability: (jobId, available) =>
+      runMutation(() => updateWorkspaceAvailability(jobId, available)),
+    markJobReady: (jobId) => runMutation(() => markJobReady(jobId)),
     createJob: async (input) => {
       try {
         const created = await storeCreateJob(input);

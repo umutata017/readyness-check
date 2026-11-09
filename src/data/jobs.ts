@@ -9,7 +9,7 @@ export type RequiredItem = {
   checked?: boolean;
   locationStatus?: string | undefined;
 };
-export type UpdateKind = "created" | "assigned" | "reassigned" | "edited";
+export type UpdateKind = "created" | "assigned" | "reassigned" | "edited" | "ready";
 export type UpdateEntry = {
   id: string;
   at: string; // ISO timestamp

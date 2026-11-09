@@ -154,6 +154,28 @@ export type NewJobInput = {
   workspaceAvailable: boolean;
 };
 
+export type ReadyCheckStatus = "unknown" | "available" | "missing";
+
+export type ReadyCheckSummary = {
+  totalItems: number;
+  checkedItems: number;
+  missingItems: number;
+  ready: boolean;
+};
+
+export function readyCheckSummary(job: Job): ReadyCheckSummary {
+  const missingItems = job.items.filter((item) => item.locationStatus === "missing").length;
+  const checkedItems = job.items.filter(
+    (item) => item.checked && item.locationStatus === "available",
+  ).length;
+  return {
+    totalItems: job.items.length,
+    checkedItems,
+    missingItems,
+    ready: job.workspaceAvailable && missingItems === 0 && checkedItems === job.items.length,
+  };
+}
+
 export type JobChanges = {
   project?: string;
   customer?: string;
@@ -418,6 +440,59 @@ export async function markJobUpdatesSeen(id: string, at = new Date().toISOString
         .eq("job_id", id)
         .eq("notify", true)
         .is("seen_at", null)
+    ).error,
+  );
+}
+
+export async function updateRequiredItem(
+  jobId: string,
+  itemId: string,
+  status: ReadyCheckStatus,
+): Promise<void> {
+  const databaseId = databaseChildId(jobId, itemId);
+  throwIfError(
+    (
+      await supabase
+        .from("required_items")
+        .update({
+          checked: status !== "unknown",
+          location_status: status === "unknown" ? null : status,
+        })
+        .eq("id", databaseId)
+        .eq("job_id", jobId)
+    ).error,
+  );
+}
+
+export async function updateWorkspaceAvailability(
+  jobId: string,
+  available: boolean,
+): Promise<void> {
+  throwIfError(
+    (await supabase.from("jobs").update({ workspace_available: available }).eq("id", jobId)).error,
+  );
+}
+
+export async function markJobReady(id: string, at = new Date().toISOString()): Promise<void> {
+  const job = (await getJobs()).find((candidate) => candidate.id === id);
+  if (!job) throw new Error(`Job ${id} was not found.`);
+  const summary = readyCheckSummary(job);
+  if (!summary.ready) {
+    throw new Error("Complete every item and confirm the workspace before marking ready.");
+  }
+  throwIfError((await supabase.from("jobs").update({ status: "ready" }).eq("id", id)).error);
+  throwIfError(
+    (
+      await supabase.from("job_updates").insert({
+        id: `${id}-ready-${Date.now()}`,
+        job_id: id,
+        kind: "ready",
+        field: "Ready check",
+        old_value: job.status,
+        new_value: "Ready",
+        notify: false,
+        created_at: at,
+      })
     ).error,
   );
 }

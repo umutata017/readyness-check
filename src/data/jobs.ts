@@ -2,7 +2,13 @@
 export type Task = { id: string; label: string; changed?: boolean };
 export type JobStatus = "not-started" | "ready" | "done";
 export type ItemKind = "equipment" | "personnel" | "material";
-export type RequiredItem = { id: string; label: string; kind: ItemKind };
+export type RequiredItem = {
+  id: string;
+  label: string;
+  kind: ItemKind;
+  checked?: boolean;
+  locationStatus?: string | undefined;
+};
 export type UpdateKind = "created" | "assigned" | "reassigned" | "edited";
 export type UpdateEntry = {
   id: string;

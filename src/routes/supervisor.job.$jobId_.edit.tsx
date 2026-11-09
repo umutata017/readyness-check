@@ -6,11 +6,23 @@ import { JobForm } from "@/components/field/JobForm";
 import { useTechnician } from "@/state/technician";
 
 export const Route = createFileRoute("/supervisor/job/$jobId_/edit")({
-  head: ({ params }) => ({ meta: [
-    { title: `Edit job ${params.jobId} — AdvantiQ` }, { name: "description", content: "Edit job requirements, reassign technicians and publish updates." },
-    { property: "og:title", content: `Edit job ${params.jobId} — AdvantiQ` }, { property: "og:description", content: "Edit job requirements, reassign technicians and publish updates." },
-    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
-  ] }), component: EditJob,
+  head: ({ params }) => ({
+    meta: [
+      { title: `Edit job ${params.jobId} — AdvantiQ` },
+      {
+        name: "description",
+        content: "Edit job requirements, reassign technicians and publish updates.",
+      },
+      { property: "og:title", content: `Edit job ${params.jobId} — AdvantiQ` },
+      {
+        property: "og:description",
+        content: "Edit job requirements, reassign technicians and publish updates.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+  component: EditJob,
 });
 function EditJob() {
   const { jobId } = Route.useParams();
@@ -19,11 +31,30 @@ function EditJob() {
   const job = getJob(jobId);
   if (!hydrated) return <AppShell title="Loading job…" wide />;
   if (!job) throw notFound();
-  return <AppShell title="Edit job" eyebrow={job.id} wide bottom={<FieldButton asChild variant="tile" className="flex-row text-base"><Link to="/supervisor/job/$jobId" params={{ jobId }}><ArrowLeft className="size-6" />Back to job</Link></FieldButton>}>
-    <JobForm key={job.id} editing initial={{ ...job, tasks: job.tasks.map((task) => task.label) }} onSave={(input, options) => {
-      editJob(jobId, input, options);
-      reassignJob(jobId, input.technicianId, options);
-      navigate({ to: "/supervisor/job/$jobId", params: { jobId } });
-    }} />
-  </AppShell>;
+  return (
+    <AppShell
+      title="Edit job"
+      eyebrow={job.id}
+      wide
+      bottom={
+        <FieldButton asChild variant="tile" className="flex-row text-base">
+          <Link to="/supervisor/job/$jobId" params={{ jobId }}>
+            <ArrowLeft className="size-6" />
+            Back to job
+          </Link>
+        </FieldButton>
+      }
+    >
+      <JobForm
+        key={job.id}
+        editing
+        initial={{ ...job, tasks: job.tasks.map((task) => task.label) }}
+        onSave={async (input, options) => {
+          await editJob(jobId, input, options);
+          await reassignJob(jobId, input.technicianId, options);
+          await navigate({ to: "/supervisor/job/$jobId", params: { jobId } });
+        }}
+      />
+    </AppShell>
+  );
 }

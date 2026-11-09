@@ -31,8 +31,8 @@ function ReadyCheckPlaceholder() {
         </FieldButton>
       }
     >
-      <section className="flex flex-col items-center gap-4 rounded-3xl bg-card p-8 text-center">
-        <ClipboardCheck className="size-12 text-primary" />
+      <section className="flex flex-col items-center gap-4 rounded-3xl border border-border bg-card p-8 text-center">
+        <ClipboardCheck className="size-12 text-foreground" />
         <p className="text-xl font-bold">Coming next</p>
       </section>
     </AppShell>

@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { CheckCircle2, ChevronDown } from "lucide-react";
+import { BrandMark } from "@/components/field/AppShell";
 import { JobCard, type DisplayStatus } from "@/components/field/JobCard";
 import { UpdateBanner } from "@/components/field/UpdateBanner";
 import { technicians, type Job } from "@/data/jobs";
@@ -32,10 +33,9 @@ function HomeScreen() {
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-background">
-      <div className="hazard-stripe h-2" aria-hidden />
-      <header className="px-gutter pb-4 pt-5">
+      <header className="px-gutter pb-4 pt-6">
         <div className="flex items-center justify-between gap-3">
-          <span className="font-display text-lg tracking-widest text-primary">ADVANTIQ</span>
+          <BrandMark />
           <label className="relative flex items-center">
             <span className="sr-only">Choose technician or supervisor</span>
             <select
@@ -47,7 +47,7 @@ function HomeScreen() {
                   setTechnicianId(e.target.value);
                 }
               }}
-              className="min-h-tap appearance-none rounded-2xl bg-secondary py-2 pl-4 pr-10 text-base font-bold text-secondary-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring"
+              className="min-h-tap appearance-none rounded-full border border-input bg-card py-2 pl-4 pr-10 text-base font-bold text-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring"
             >
               {technicians.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -56,7 +56,7 @@ function HomeScreen() {
               ))}
               <option value="supervisor">Supervisor</option>
             </select>
-            <ChevronDown className="pointer-events-none absolute right-3 size-5 text-muted-foreground" aria-hidden />
+            <ChevronDown className="pointer-events-none absolute right-3 size-5 text-foreground" aria-hidden />
           </label>
         </div>
       </header>
@@ -65,13 +65,13 @@ function HomeScreen() {
         {updatedJob ? (
           <UpdateBanner job={updatedJob} />
         ) : (
-          <p className="flex items-center gap-2 rounded-2xl bg-card px-4 py-3 text-sm font-semibold text-muted-foreground">
+          <p className="flex items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3 text-sm font-semibold text-foreground">
             <CheckCircle2 className="size-5 text-success" /> No new updates
           </p>
         )}
 
         <section className="space-y-3">
-          <h2 className="text-sm font-extrabold uppercase tracking-widest text-muted-foreground">My jobs</h2>
+          <h2 className="text-sm font-extrabold uppercase tracking-widest text-foreground">My jobs</h2>
           {myJobs.map((job) => (
             <JobCard key={job.id} job={job} status={displayStatus(job, Boolean(openUpdate(job)))} />
           ))}

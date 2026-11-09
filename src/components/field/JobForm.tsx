@@ -118,7 +118,7 @@ export function JobForm({
       {error && (
         <p
           role="alert"
-          className="rounded-2xl border-2 border-change bg-change-surface p-4 font-semibold text-change-foreground"
+          className="rounded-2xl border-2 border-destructive/40 bg-destructive/5 p-4 font-semibold text-destructive"
         >
           {error}
         </p>

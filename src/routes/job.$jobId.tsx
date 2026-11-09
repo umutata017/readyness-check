@@ -1,5 +1,13 @@
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
-import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, Clock, MapPin, User } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  Clock,
+  MapPin,
+  User,
+} from "lucide-react";
 import { AppShell } from "@/components/field/AppShell";
 import { FieldButton } from "@/components/field/FieldButton";
 import { JobActions } from "@/components/field/JobActions";
@@ -10,9 +18,15 @@ export const Route = createFileRoute("/job/$jobId")({
   head: ({ params }) => ({
     meta: [
       { title: `Job ${params.jobId} — AdvantiQ` },
-      { name: "description", content: "Job details, tasks and latest changes for the on-site technician." },
+      {
+        name: "description",
+        content: "Job details, tasks and latest changes for the on-site technician.",
+      },
       { property: "og:title", content: `Job ${params.jobId} — AdvantiQ` },
-      { property: "og:description", content: "Job details, tasks and latest changes for the on-site technician." },
+      {
+        property: "og:description",
+        content: "Job details, tasks and latest changes for the on-site technician.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -51,7 +65,9 @@ function JobDetail() {
       </section>
 
       <section>
-        <h2 className="mb-3 text-sm font-extrabold uppercase tracking-widest text-muted-foreground">Tasks</h2>
+        <h2 className="mb-3 text-sm font-extrabold uppercase tracking-widest text-muted-foreground">
+          Tasks
+        </h2>
         <ol className="space-y-2">
           {job.tasks.map((t, i) => (
             <li
@@ -62,9 +78,22 @@ function JobDetail() {
                   : "flex items-center gap-4 rounded-2xl bg-card p-4"
               }
             >
-              <span className={changedTaskIds.has(t.id) ? "grid size-9 shrink-0 place-items-center rounded-full bg-change font-bold text-change-foreground" : "grid size-9 shrink-0 place-items-center rounded-full bg-secondary font-bold"}>{i + 1}</span>
+              <span
+                className={
+                  changedTaskIds.has(t.id)
+                    ? "grid size-9 shrink-0 place-items-center rounded-full bg-change font-bold text-change-foreground"
+                    : "grid size-9 shrink-0 place-items-center rounded-full bg-secondary font-bold"
+                }
+              >
+                {i + 1}
+              </span>
               <span className="text-lg font-semibold leading-snug">{t.label}</span>
-              {changedTaskIds.has(t.id) && <AlertTriangle className="ml-auto size-6 shrink-0 text-change" aria-label="Changed" />}
+              {changedTaskIds.has(t.id) && (
+                <AlertTriangle
+                  className="ml-auto size-6 shrink-0 text-change"
+                  aria-label="Changed"
+                />
+              )}
             </li>
           ))}
         </ol>
@@ -72,26 +101,46 @@ function JobDetail() {
 
       {(open.length > 0 || latest) && (
         <section
-          className={seen ? "rounded-3xl border-2 border-success bg-card p-5" : "rounded-3xl border-2 border-change bg-change-surface p-5"}
+          className={
+            seen
+              ? "rounded-3xl border-2 border-success bg-card p-5"
+              : "rounded-3xl border-2 border-change bg-change-surface p-5"
+          }
           aria-live="polite"
         >
           <div className="flex items-center gap-2">
-            {seen ? <CheckCircle2 className="size-6 text-success" /> : <AlertTriangle className="size-6 text-change" />}
+            {seen ? (
+              <CheckCircle2 className="size-6 text-success" />
+            ) : (
+              <AlertTriangle className="size-6 text-change" />
+            )}
             <h2 className="font-display text-xl">{seen ? "Update confirmed" : "Update"}</h2>
           </div>
           {(seen ? (latest ? [latest] : []) : open).map((u) => (
             <div key={u.id} className="mt-3">
-              <p className="text-sm font-bold uppercase tracking-wider text-muted-foreground">{u.field}</p>
+              <p className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+                {u.field}
+              </p>
               <div className="mt-1 flex flex-wrap items-center gap-3 text-lg font-bold">
-                {u.oldValue && <span className="text-muted-foreground line-through">{u.oldValue}</span>}
+                {u.oldValue && (
+                  <span className="text-muted-foreground line-through">{u.oldValue}</span>
+                )}
                 {u.oldValue && <ArrowRight className="size-5" />}
-                <span className={seen ? "text-foreground" : "text-change-foreground"}>{u.newValue}</span>
+                <span className={seen ? "text-foreground" : "text-change-foreground"}>
+                  {u.newValue}
+                </span>
               </div>
-              {u.message && <p className="mt-1 text-base font-semibold text-muted-foreground">“{u.message}”</p>}
+              {u.message && (
+                <p className="mt-1 text-base font-semibold text-muted-foreground">“{u.message}”</p>
+              )}
             </div>
           ))}
           {!seen && (
-            <FieldButton className="mt-5" variant="primary" onClick={() => markUpdateSeen(job.id)}>
+            <FieldButton
+              className="mt-5"
+              variant="primary"
+              onClick={() => void markUpdateSeen(job.id)}
+            >
               Seen
             </FieldButton>
           )}

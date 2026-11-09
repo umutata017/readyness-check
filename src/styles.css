@@ -67,6 +67,11 @@
   --color-change: var(--change);
   --color-change-surface: var(--change-surface);
   --color-change-foreground: var(--change-foreground);
+  --color-change-fill: var(--change-fill);
+  --color-change-soft: var(--change-soft);
+  --color-change-border: var(--change-border);
+  --color-pending: var(--pending);
+  --color-brand-ink: var(--brand-ink);
   --font-sans: "Archivo", system-ui, sans-serif;
   --font-display: "Archivo Black", "Archivo", sans-serif;
   --spacing-tap: var(--tap);
@@ -82,37 +87,46 @@
 }
 
 :root {
-  /* AdvantiQ field theme — change the look here */
+  /* AdvantiQ light SaaS theme — change the look here */
   --radius: 1.25rem;
-  --background: oklch(0.17 0.008 260);
-  --foreground: oklch(0.97 0.005 90);
-  --card: oklch(0.23 0.01 260);
-  --card-foreground: oklch(0.97 0.005 90);
-  --popover: oklch(0.23 0.01 260);
-  --popover-foreground: oklch(0.97 0.005 90);
-  --primary: oklch(0.87 0.18 95);
-  --primary-foreground: oklch(0.17 0.01 260);
-  --secondary: oklch(0.3 0.012 260);
-  --secondary-foreground: oklch(0.97 0.005 90);
-  --muted: oklch(0.27 0.01 260);
-  --muted-foreground: oklch(0.75 0.01 260);
-  --accent: oklch(0.3 0.012 260);
-  --accent-foreground: oklch(0.97 0.005 90);
-  --destructive: oklch(0.64 0.22 27);
-  --destructive-foreground: oklch(0.99 0 0);
-  --success: oklch(0.74 0.18 150);
-  --success-foreground: oklch(0.17 0.01 260);
-  --change: oklch(0.64 0.22 27);
-  --change-surface: oklch(0.3 0.09 27);
-  --change-foreground: oklch(0.99 0 0);
-  --border: oklch(0.36 0.012 260);
-  --input: oklch(0.36 0.012 260);
-  --ring: oklch(0.87 0.18 95);
-  --chart-1: oklch(0.87 0.18 95); --chart-2: oklch(0.74 0.18 150); --chart-3: oklch(0.64 0.22 27); --chart-4: oklch(0.7 0.1 240); --chart-5: oklch(0.6 0.02 260);
-  --sidebar: oklch(0.2 0.01 260); --sidebar-foreground: oklch(0.97 0.005 90); --sidebar-primary: oklch(0.87 0.18 95); --sidebar-primary-foreground: oklch(0.17 0.01 260); --sidebar-accent: oklch(0.3 0.012 260); --sidebar-accent-foreground: oklch(0.97 0.005 90); --sidebar-border: oklch(0.36 0.012 260); --sidebar-ring: oklch(0.87 0.18 95);
+  /* Neutrals: white surfaces, dark navy (#10152F) for all regular text and icons */
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.207 0.052 272.9);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.207 0.052 272.9);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.207 0.052 272.9);
+  --muted: oklch(0.967 0.006 264.5);
+  --muted-foreground: oklch(0.35 0.05 272);
+  /* Soft sky blue accent (#B9D9FF / #C8E1FF / #DCEBFF) */
+  --primary: oklch(0.875 0.063 252.9);
+  --primary-foreground: oklch(0.207 0.052 272.9);
+  --secondary: oklch(0.984 0.008 253.9);
+  --secondary-foreground: oklch(0.207 0.052 272.9);
+  --accent: oklch(0.968 0.015 257.2);
+  --accent-foreground: oklch(0.207 0.052 272.9);
+  --border: oklch(0.935 0.032 255.6);
+  --input: oklch(0.901 0.049 253.1);
+  --ring: oklch(0.645 0.121 256.5);
+  --brand-ink: oklch(0.615 0.13 260);           /* #5482D6 logo blue */
+  --brand-gradient: linear-gradient(135deg, oklch(0.935 0.032 255.6), oklch(0.875 0.063 252.9));
+  --destructive: oklch(0.576 0.209 29.5);
+  --destructive-foreground: oklch(1 0 0);
+  /* Green: only for Ready / Done (#16B86A) */
+  --success: oklch(0.689 0.167 154.6);
+  --success-foreground: oklch(1 0 0);
+  /* Pastel yellow: Updated / change-related elements */
+  --change: oklch(0.625 0.133 73.4);            /* #B77900 amber icon + badge text */
+  --change-foreground: oklch(0.508 0.108 73.3); /* #8A5A00 dark amber body text */
+  --change-fill: oklch(0.932 0.1 93.6);         /* #FFE89A buttons */
+  --change-soft: oklch(0.953 0.079 95.9);       /* #FFF0B3 badges, icon dots */
+  --change-surface: oklch(0.986 0.025 97.1);    /* #FFFBE8 highlighted card */
+  --change-border: oklch(0.887 0.12 93);        /* #F5D878 highlighted card border */
+  --pending: oklch(0.977 0.037 95.4);           /* #FFF8DC "Not started" badge */
+  --chart-1: oklch(0.875 0.063 252.9); --chart-2: oklch(0.689 0.167 154.6); --chart-3: oklch(0.887 0.12 93); --chart-4: oklch(0.645 0.121 256.5); --chart-5: oklch(0.35 0.05 272);
+  --sidebar: oklch(0.984 0.008 253.9); --sidebar-foreground: oklch(0.207 0.052 272.9); --sidebar-primary: oklch(0.875 0.063 252.9); --sidebar-primary-foreground: oklch(0.207 0.052 272.9); --sidebar-accent: oklch(0.968 0.015 257.2); --sidebar-accent-foreground: oklch(0.207 0.052 272.9); --sidebar-border: oklch(0.935 0.032 255.6); --sidebar-ring: oklch(0.645 0.121 256.5);
   --tap: 3.75rem;       /* min glove tap target */
   --gutter: 1.25rem;    /* screen side padding */
-  --stripe: repeating-linear-gradient(-45deg, var(--primary) 0 10px, var(--background) 10px 20px);
 }
 
 @layer base {
@@ -126,10 +140,10 @@
   }
 }
 
-@utility hazard-stripe {
-  background: var(--stripe);
-}
-@layer base {
+/* Soft blue gradient for the brand mark and primary actions */
+@utility bg-brand {
+  background-image: var(--brand-gradient);
+}@layer base {
   body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
   button { -webkit-tap-highlight-color: transparent; }
 }

@@ -71,9 +71,9 @@ function ReadyCheck() {
         </FieldButton>
       }
     >
-      <section className="rounded-3xl bg-card p-5">
+      <section className="rounded-3xl border border-border bg-card p-5">
         <div className="flex items-center gap-3">
-          <ClipboardCheck className="size-7 text-primary" />
+          <ClipboardCheck className="size-7 text-foreground" />
           <div>
             <p className="font-display text-xl">{job.project}</p>
             <p className="text-sm font-semibold text-muted-foreground">

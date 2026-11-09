@@ -58,7 +58,7 @@ function JobDetail() {
         </FieldButton>
       }
     >
-      <section className="space-y-3 rounded-3xl bg-card p-5 text-lg">
+      <section className="space-y-3 rounded-3xl border border-border bg-card p-5 text-lg">
         <Info icon={<User className="size-5" />} text={job.customer} />
         <Info icon={<MapPin className="size-5" />} text={job.address} />
         <Info icon={<Clock className="size-5" />} text={job.timeslot} strong />
@@ -74,15 +74,15 @@ function JobDetail() {
               key={t.id}
               className={
                 changedTaskIds.has(t.id)
-                  ? "flex items-center gap-4 rounded-2xl border-2 border-change bg-change-surface p-4"
-                  : "flex items-center gap-4 rounded-2xl bg-card p-4"
+                  ? "flex items-center gap-4 rounded-2xl border-2 border-change-border bg-change-surface p-4"
+                  : "flex items-center gap-4 rounded-2xl border border-border bg-card p-4"
               }
             >
               <span
                 className={
                   changedTaskIds.has(t.id)
-                    ? "grid size-9 shrink-0 place-items-center rounded-full bg-change font-bold text-change-foreground"
-                    : "grid size-9 shrink-0 place-items-center rounded-full bg-secondary font-bold"
+                    ? "grid size-9 shrink-0 place-items-center rounded-full bg-change-soft font-bold text-change-foreground"
+                    : "grid size-9 shrink-0 place-items-center rounded-full bg-accent font-bold"
                 }
               >
                 {i + 1}
@@ -104,7 +104,7 @@ function JobDetail() {
           className={
             seen
               ? "rounded-3xl border-2 border-success bg-card p-5"
-              : "rounded-3xl border-2 border-change bg-change-surface p-5"
+              : "rounded-3xl border-2 border-change-border bg-change-surface p-5"
           }
           aria-live="polite"
         >
@@ -160,8 +160,8 @@ function JobDetail() {
 function Info({ icon, text, strong }: { icon: React.ReactNode; text: string; strong?: boolean }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="text-primary">{icon}</span>
-      <span className={strong ? "font-bold text-primary" : "font-semibold"}>{text}</span>
+      <span className="text-foreground">{icon}</span>
+      <span className={strong ? "font-bold" : "font-semibold"}>{text}</span>
     </div>
   );
 }

@@ -9,7 +9,13 @@ export type RequiredItem = {
   checked?: boolean;
   locationStatus?: string | undefined;
 };
-export type UpdateKind = "created" | "assigned" | "reassigned" | "edited" | "cancelled";
+export type UpdateKind =
+  | "created"
+  | "assigned"
+  | "reassigned"
+  | "edited"
+  | "ready"
+  | "cancelled";
 export type CancelReason = "resident" | "supervisor";
 export const CANCEL_REASON_LABELS: Record<CancelReason, string> = {
   resident: "Cancelled by resident",

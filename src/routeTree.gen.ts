@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LandingRouteImport } from './routes/landing'
 import { Route as JobJobIdRouteImport } from './routes/job.$jobId'
 import { Route as SupervisorIndexRouteImport } from './routes/supervisor.index'
 import { Route as SupervisorNewRouteImport } from './routes/supervisor.new'
@@ -21,6 +22,11 @@ import { Route as SupervisorJobJobIdEditRouteImport } from './routes/supervisor.
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LandingRoute = LandingRouteImport.update({
+  id: '/landing',
+  path: '/landing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JobJobIdRoute = JobJobIdRouteImport.update({
@@ -61,6 +67,7 @@ const SupervisorJobJobIdEditRoute = SupervisorJobJobIdEditRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/landing': typeof LandingRoute
   '/job/$jobId': typeof JobJobIdRoute
   '/supervisor/new': typeof SupervisorNewRoute
   '/supervisor/': typeof SupervisorIndexRoute
@@ -71,6 +78,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/landing': typeof LandingRoute
   '/job/$jobId': typeof JobJobIdRoute
   '/supervisor/new': typeof SupervisorNewRoute
   '/supervisor': typeof SupervisorIndexRoute
@@ -82,6 +90,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/landing': typeof LandingRoute
   '/job/$jobId': typeof JobJobIdRoute
   '/supervisor/new': typeof SupervisorNewRoute
   '/supervisor/': typeof SupervisorIndexRoute
@@ -94,6 +103,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/landing'
     | '/job/$jobId'
     | '/supervisor/new'
     | '/supervisor/'
@@ -104,6 +114,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/landing'
     | '/job/$jobId'
     | '/supervisor/new'
     | '/supervisor'
@@ -114,6 +125,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/landing'
     | '/job/$jobId'
     | '/supervisor/new'
     | '/supervisor/'
@@ -125,6 +137,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LandingRoute: typeof LandingRoute
   JobJobIdRoute: typeof JobJobIdRoute
   SupervisorNewRoute: typeof SupervisorNewRoute
   SupervisorIndexRoute: typeof SupervisorIndexRoute
@@ -141,6 +154,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/landing': {
+      id: '/landing'
+      path: '/landing'
+      fullPath: '/landing'
+      preLoaderRoute: typeof LandingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/job/$jobId': {
@@ -197,6 +217,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LandingRoute: LandingRoute,
   JobJobIdRoute: JobJobIdRoute,
   SupervisorNewRoute: SupervisorNewRoute,
   SupervisorIndexRoute: SupervisorIndexRoute,

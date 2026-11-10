@@ -26,7 +26,7 @@ export function JobActions({ job }: { job: Job }) {
           <ClipboardCheck className="size-6" />Ready check
         </Link>
       </FieldButton>
-      <FieldButton asChild variant="change">
+      <FieldButton asChild>
         <Link to="/job/$jobId/report" params={{ jobId: job.id }}>
           <Mic className="size-6" />Report
         </Link>

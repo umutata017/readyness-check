@@ -1,7 +1,8 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { supabase, supabaseConfigured } from "@/lib/supabase";
-import { technicians, type Job, type UpdateEntry } from "@/data/jobs";
+import { technicians, type CancelReason, type Job, type UpdateEntry } from "@/data/jobs";
 import {
+  cancelJob as storeCancelJob,
   createJob as storeCreateJob,
   editJob as storeEditJob,
   getJobs,
@@ -38,6 +39,7 @@ type TechnicianContextValue = {
     technicianId: string,
     opts: { message?: string; notify: boolean },
   ) => Promise<void>;
+  cancelJob: (id: string, reason: CancelReason, note?: string) => Promise<void>;
   resetDemo: () => Promise<void>;
 };
 
@@ -149,6 +151,7 @@ export function TechnicianProvider({ children }: { children: ReactNode }) {
     editJob: (id, changes, opts) => runMutation(() => storeEditJob(id, changes, opts)),
     reassignJob: (id, technicianId, opts) =>
       runMutation(() => storeReassignJob(id, technicianId, opts)),
+    cancelJob: (id, reason, note) => runMutation(() => storeCancelJob(id, reason, note)),
     resetDemo: () => runMutation(storeResetDemoData),
   };
 

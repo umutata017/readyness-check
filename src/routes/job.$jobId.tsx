@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/field/AppShell";
 import { FieldButton } from "@/components/field/FieldButton";
+import { CancelNotice } from "@/components/field/CancelNotice";
 import { JobActions } from "@/components/field/JobActions";
 import { openEntries } from "@/data/store";
 import { useTechnician } from "@/state/technician";
@@ -41,7 +42,8 @@ function JobDetail() {
   if (!job && !hydrated) return <AppShell title="Loading job…" />;
   if (!job) throw notFound();
 
-  const open = openEntries(job);
+  // A cancelled job shows only the red cancellation notice, not pending updates or a Seen button.
+  const open = job.cancellation ? [] : openEntries(job);
   const seen = open.length === 0;
   const changedTaskIds = new Set(open.map((e) => e.taskId).filter(Boolean));
   const latest = job.history.at(-1);
@@ -58,6 +60,7 @@ function JobDetail() {
         </FieldButton>
       }
     >
+      {job.cancellation && <CancelNotice cancellation={job.cancellation} />}
       <section className="space-y-3 rounded-3xl border border-border bg-card p-5 text-lg">
         <Info icon={<User className="size-5" />} text={job.customer} />
         <Info icon={<MapPin className="size-5" />} text={job.address} />
@@ -99,7 +102,7 @@ function JobDetail() {
         </ol>
       </section>
 
-      {(open.length > 0 || latest) && (
+      {!job.cancellation && (open.length > 0 || latest) && (
         <section
           className={
             seen
@@ -138,7 +141,7 @@ function JobDetail() {
           {!seen && (
             <FieldButton
               className="mt-5"
-              variant="primary"
+              variant="change"
               onClick={() => void markUpdateSeen(job.id)}
             >
               Seen

@@ -9,7 +9,13 @@ export type RequiredItem = {
   checked?: boolean;
   locationStatus?: string | undefined;
 };
-export type UpdateKind = "created" | "assigned" | "reassigned" | "edited";
+export type UpdateKind = "created" | "assigned" | "reassigned" | "edited" | "cancelled";
+export type CancelReason = "resident" | "supervisor";
+export const CANCEL_REASON_LABELS: Record<CancelReason, string> = {
+  resident: "Cancelled by resident",
+  supervisor: "Cancelled by supervisor",
+};
+export type Cancellation = { reason: CancelReason; note?: string | undefined; at: string };
 export type UpdateEntry = {
   id: string;
   at: string; // ISO timestamp
@@ -35,6 +41,7 @@ export type Job = {
   items: RequiredItem[];
   workspaceAvailable: boolean;
   history: UpdateEntry[];
+  cancellation?: Cancellation | undefined; // set when a supervisor removes the job
 };
 export type Technician = { id: string; name: string };
 

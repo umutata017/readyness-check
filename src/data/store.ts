@@ -1,5 +1,21 @@
 import { supabase } from "@/lib/supabase";
-import { technicianName, type ItemKind, type Job, type UpdateEntry } from "./jobs";
+import {
+  CANCEL_REASON_LABELS,
+  technicianName,
+  type CancelReason,
+  type ItemKind,
+  type Job,
+  type UpdateEntry,
+} from "./jobs";
+
+/** What a job card shows: cancellation wins over an unseen update, which wins over the stored status. */
+export type DisplayStatus = "cancelled" | "updated" | Job["status"];
+
+export function displayStatus(job: Job, hasOpenUpdate: boolean): DisplayStatus {
+  if (job.cancellation) return "cancelled";
+  if (hasOpenUpdate) return "updated";
+  return job.status;
+}
 
 type JobRow = {
   id: string;
@@ -11,6 +27,9 @@ type JobRow = {
   job_type: string;
   status: Job["status"];
   workspace_available: boolean;
+  cancel_reason?: CancelReason | null;
+  cancel_note?: string | null;
+  cancelled_at?: string | null;
 };
 
 type TaskRow = { id: string; job_id: string; label: string; position: number };
@@ -92,6 +111,13 @@ function mapJob(job: JobRow, tasks: TaskRow[], items: ItemRow[], updates: Update
         locationStatus: item.location_status ?? undefined,
       })),
     workspaceAvailable: job.workspace_available,
+    cancellation: job.cancel_reason
+      ? {
+          reason: job.cancel_reason,
+          note: job.cancel_note ?? undefined,
+          at: job.cancelled_at ?? "",
+        }
+      : undefined,
     history: updates
       .filter((update) => update.job_id === job.id)
       .sort((a, b) => a.created_at.localeCompare(b.created_at))
@@ -403,6 +429,40 @@ export async function reassignJob(
         new_value: technicianName(technicianId),
         message: opts.message?.trim() || null,
         notify: opts.notify,
+        created_at: at,
+      })
+    ).error,
+  );
+}
+
+/** Supervisor removes a job: it stays visible to the technician, marked cancelled with the reason. */
+export async function cancelJob(
+  id: string,
+  reason: CancelReason,
+  note: string | undefined,
+  at = new Date().toISOString(),
+): Promise<void> {
+  const cancelNote = note?.trim() || null;
+  throwIfError(
+    (
+      await supabase
+        .from("jobs")
+        .update({ cancel_reason: reason, cancel_note: cancelNote, cancelled_at: at })
+        .eq("id", id)
+    ).error,
+  );
+  throwIfError(
+    (
+      await supabase.from("job_updates").insert({
+        id: `${id}-u-${Date.now()}`,
+        job_id: id,
+        kind: "cancelled",
+        field: "Job",
+        old_value: "",
+        new_value: CANCEL_REASON_LABELS[reason],
+        message: cancelNote,
+        // The red cancelled highlight is the notice; no yellow "updated" banner on top.
+        notify: false,
         created_at: at,
       })
     ).error,

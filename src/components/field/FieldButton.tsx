@@ -11,6 +11,7 @@ const fieldButton = cva(
         primary: "bg-brand rounded-full border border-input text-primary-foreground",
         change: "border border-change-border bg-change-fill text-foreground",
         success: "bg-success text-success-foreground",
+        danger: "rounded-full bg-destructive text-destructive-foreground",
         tile: "flex-col gap-1 border border-border bg-secondary text-secondary-foreground text-sm py-3 min-h-[4.5rem]",
       },
     },

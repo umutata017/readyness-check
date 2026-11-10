@@ -21,16 +21,20 @@ export function JobActions({ job }: { job: Job }) {
           </a>
         </FieldButton>
       </div>
-      <FieldButton asChild>
-        <Link to="/job/$jobId/ready-check" params={{ jobId: job.id }}>
-          <ClipboardCheck className="size-6" />Ready check
-        </Link>
-      </FieldButton>
-      <FieldButton asChild variant="change">
-        <Link to="/job/$jobId/report" params={{ jobId: job.id }}>
-          <Mic className="size-6" />Report
-        </Link>
-      </FieldButton>
+      {!job.cancellation && (
+        <>
+          <FieldButton asChild>
+            <Link to="/job/$jobId/ready-check" params={{ jobId: job.id }}>
+              <ClipboardCheck className="size-6" />Ready check
+            </Link>
+          </FieldButton>
+          <FieldButton asChild>
+            <Link to="/job/$jobId/report" params={{ jobId: job.id }}>
+              <Mic className="size-6" />Report
+            </Link>
+          </FieldButton>
+        </>
+      )}
     </section>
   );
 }

@@ -71,6 +71,9 @@
   --color-change-soft: var(--change-soft);
   --color-change-border: var(--change-border);
   --color-pending: var(--pending);
+  --color-cancel-surface: var(--cancel-surface);
+  --color-cancel-border: var(--cancel-border);
+  --color-cancel-foreground: var(--cancel-foreground);
   --color-brand-ink: var(--brand-ink);
   --font-sans: "Archivo", system-ui, sans-serif;
   --font-display: "Archivo Black", "Archivo", sans-serif;
@@ -123,6 +126,10 @@
   --change-surface: oklch(0.986 0.025 97.1);    /* #FFFBE8 highlighted card */
   --change-border: oklch(0.887 0.12 93);        /* #F5D878 highlighted card border */
   --pending: oklch(0.977 0.037 95.4);           /* #FFF8DC "Not started" badge */
+  /* Light red: cancelled (removed) jobs */
+  --cancel-surface: oklch(0.975 0.015 20);      /* #FFF3F2 highlighted card */
+  --cancel-border: oklch(0.85 0.08 22);         /* #F4B4AE card border */
+  --cancel-foreground: oklch(0.5 0.17 28);      /* #B42318 dark red reason text */
   --chart-1: oklch(0.875 0.063 252.9); --chart-2: oklch(0.689 0.167 154.6); --chart-3: oklch(0.887 0.12 93); --chart-4: oklch(0.645 0.121 256.5); --chart-5: oklch(0.35 0.05 272);
   --sidebar: oklch(0.984 0.008 253.9); --sidebar-foreground: oklch(0.207 0.052 272.9); --sidebar-primary: oklch(0.875 0.063 252.9); --sidebar-primary-foreground: oklch(0.207 0.052 272.9); --sidebar-accent: oklch(0.968 0.015 257.2); --sidebar-accent-foreground: oklch(0.207 0.052 272.9); --sidebar-border: oklch(0.935 0.032 255.6); --sidebar-ring: oklch(0.645 0.121 256.5);
   --tap: 3.75rem;       /* min glove tap target */

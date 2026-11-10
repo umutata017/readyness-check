@@ -2,6 +2,7 @@ import { Link, createFileRoute, notFound } from "@tanstack/react-router";
 import { AlertTriangle, ArrowLeft, CheckCircle2, ClipboardCheck } from "lucide-react";
 import { useState } from "react";
 import { AppShell } from "@/components/field/AppShell";
+import { CancelNotice } from "@/components/field/CancelNotice";
 import { FieldButton } from "@/components/field/FieldButton";
 import { readyCheckSummary, type ReadyCheckStatus } from "@/data/store";
 import { useTechnician } from "@/state/technician";
@@ -71,6 +72,12 @@ function ReadyCheck() {
         </FieldButton>
       }
     >
+      {job.cancellation && <CancelNotice cancellation={job.cancellation} />}
+      {job.cancellation && (
+        <p className="rounded-2xl border border-cancel-border bg-cancel-surface p-4 font-bold text-cancel-foreground">
+          This job was cancelled. Do not start work or complete the ready check.
+        </p>
+      )}
       <section className="rounded-3xl border border-border bg-card p-5">
         <div className="flex items-center gap-3">
           <ClipboardCheck className="size-7 text-foreground" />
@@ -115,7 +122,7 @@ function ReadyCheck() {
                     <button
                       key={option}
                       type="button"
-                      disabled={saving}
+                      disabled={saving || Boolean(job.cancellation)}
                       onClick={() => void save(() => updateRequiredItem(job.id, item.id, option))}
                       className={`min-h-tap rounded-2xl px-2 text-sm font-bold ${status === option ? (option === "available" ? "bg-success text-success-foreground" : option === "missing" ? "bg-change text-change-foreground" : "bg-secondary text-secondary-foreground") : "bg-muted text-muted-foreground"}`}
                     >
@@ -150,7 +157,7 @@ function ReadyCheck() {
           </div>
           <button
             type="button"
-            disabled={saving}
+            disabled={saving || Boolean(job.cancellation)}
             role="switch"
             aria-checked={job.workspaceAvailable}
             onClick={() =>
@@ -176,7 +183,9 @@ function ReadyCheck() {
         <FieldButton
           className="mt-4"
           variant={summary.ready ? "success" : "change"}
-          disabled={!summary.ready || saving || job.status === "ready"}
+          disabled={
+            !summary.ready || saving || job.status === "ready" || Boolean(job.cancellation)
+          }
           onClick={() => void save(() => markJobReady(job.id))}
         >
           {job.status === "ready" ? (

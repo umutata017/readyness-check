@@ -1,11 +1,13 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { ArrowLeft, Plus, RotateCcw } from "lucide-react";
+import { Plus, RotateCcw } from "lucide-react";
 import { AppShell } from "@/components/field/AppShell";
 import { FieldButton } from "@/components/field/FieldButton";
 import { FieldLabel, FieldSelect } from "@/components/field/inputs";
 import { JobCard } from "@/components/field/JobCard";
+import { RoleSwitcher } from "@/components/field/RoleSwitcher";
 import { technicians } from "@/data/jobs";
+import { displayStatus } from "@/data/store";
 import { useTechnician } from "@/state/technician";
 
 export const Route = createFileRoute("/supervisor/")({
@@ -36,22 +38,13 @@ function SupervisorJobs() {
   const filtered = jobs.filter(
     (job) =>
       (technician === "all" || job.technicianId === technician) &&
-      (status === "all" ||
-        (status === "updated" ? Boolean(openUpdate(job)) : job.status === status)),
+      (status === "all" || displayStatus(job, Boolean(openUpdate(job))) === status),
   );
   return (
     <AppShell
       title="All jobs"
-      eyebrow="Supervisor"
       wide
-      bottom={
-        <FieldButton asChild variant="tile" className="flex-row text-base">
-          <Link to="/">
-            <ArrowLeft className="size-6" />
-            Technician view
-          </Link>
-        </FieldButton>
-      }
+      headerRight={<RoleSwitcher supervisor />}
     >
       <FieldButton asChild>
         <Link to="/supervisor/new">
@@ -79,6 +72,7 @@ function SupervisorJobs() {
             <option value="not-started">Not started</option>
             <option value="ready">Ready</option>
             <option value="done">Done</option>
+            <option value="cancelled">Cancelled</option>
           </FieldSelect>
         </label>
       </div>
@@ -87,7 +81,7 @@ function SupervisorJobs() {
           <JobCard
             key={job.id}
             job={job}
-            status={openUpdate(job) ? "updated" : job.status}
+            status={displayStatus(job, Boolean(openUpdate(job)))}
             detailPath="/supervisor/job/$jobId"
           />
         ))}

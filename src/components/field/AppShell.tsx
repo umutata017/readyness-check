@@ -5,14 +5,17 @@ export function BrandMark() {
   return <span className="font-display text-3xl leading-tight tracking-wider text-brand-ink">ADVANTIQ</span>;
 }
 
-/** Shared mobile screen frame: top bar, scrollable body, sticky bottom action bar. `wide` lets supervisor screens use more room on a laptop. */
-export function AppShell({ title, eyebrow, children, bottom, wide }: { title: string; eyebrow?: string; children?: ReactNode; bottom?: ReactNode; wide?: boolean }) {
+/**
+ * Shared mobile screen frame: top bar, scrollable body, sticky bottom action bar. `wide` lets screens use more room on a laptop.
+ * The top-right slot shows `headerRight` (e.g. the role switcher) or, failing that, the `eyebrow` badge.
+ */
+export function AppShell({ title, eyebrow, headerRight, children, bottom, wide }: { title: string; eyebrow?: string; headerRight?: ReactNode; children?: ReactNode; bottom?: ReactNode; wide?: boolean }) {
   return (
     <div className={`mx-auto flex min-h-dvh w-full flex-col bg-background ${wide ? "max-w-md sm:max-w-3xl" : "max-w-md"}`}>
       <header className="px-gutter pb-3 pt-6">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex min-h-tap items-center justify-between gap-3">
           <BrandMark />
-          {eyebrow && <span className="rounded-full border border-border bg-accent px-3 py-1 text-sm font-bold text-foreground">{eyebrow}</span>}
+          {headerRight ?? (eyebrow && <span className="rounded-full border border-border bg-accent px-3 py-1 text-sm font-bold text-foreground">{eyebrow}</span>)}
         </div>
         <h1 className="mt-3 font-display text-3xl leading-tight text-foreground">{title}</h1>
       </header>

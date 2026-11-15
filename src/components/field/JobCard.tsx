@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
-import { AlertTriangle, ChevronRight, Clock, MapPin, User, XCircle } from "lucide-react";
-import { CANCEL_REASON_LABELS, type Job } from "@/data/jobs";
+import { AlertTriangle, ChevronRight, Clock, Hash, MapPin, User, XCircle } from "lucide-react";
+import { CANCEL_REASON_LABELS, jobCode, jobNumberMeaning, type Job } from "@/data/jobs";
 import type { DisplayStatus } from "@/data/store";
 import { cn } from "@/lib/utils";
 
@@ -37,7 +37,13 @@ export function JobCard({ job, status, detailPath = "/job/$jobId" }: { job: Job;
       )}
     >
       <div className="flex items-start justify-between gap-3">
-        <h2 className="font-display text-xl leading-tight">{job.project}</h2>
+        <div className="min-w-0">
+          <p className="flex items-center gap-1 font-mono text-sm font-bold tracking-wider text-muted-foreground">
+            <Hash className="size-3.5" aria-hidden />
+            <span aria-label="Job number" title={jobNumberMeaning(job)}>{jobCode(job)}</span>
+          </p>
+          <h2 className="mt-1 font-display text-xl leading-tight">{job.project}</h2>
+        </div>
         <span className={cn("flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-sm font-bold", statusStyle[status])}>
           {updated && <AlertTriangle className="size-4" aria-hidden />}
           {cancelled && <XCircle className="size-4" aria-hidden />}

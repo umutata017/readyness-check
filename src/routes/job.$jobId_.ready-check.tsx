@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AppShell } from "@/components/field/AppShell";
 import { CancelNotice } from "@/components/field/CancelNotice";
 import { FieldButton } from "@/components/field/FieldButton";
+import { jobCode } from "@/data/jobs";
 import { readyCheckSummary, type ReadyCheckStatus } from "@/data/store";
 import { useTechnician } from "@/state/technician";
 
@@ -63,7 +64,7 @@ function ReadyCheck() {
   return (
     <AppShell
       title="Ready check"
-      eyebrow={job.id}
+      eyebrow={jobCode(job)}
       bottom={
         <FieldButton asChild variant="tile" className="min-h-tap flex-row text-base">
           <Link to="/job/$jobId" params={{ jobId }}>

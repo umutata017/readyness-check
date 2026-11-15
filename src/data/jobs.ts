@@ -34,8 +34,11 @@ export type UpdateEntry = {
   notify: boolean; // whether the technician gets a banner for this update
   seenAt?: string | undefined; // set when the technician taps "Seen"
 };
+/** Year-based job number, e.g. J26-0042 = the 42nd job created in 2026. */
+export type JobNumber = { year: number; sequence: number };
 export type Job = {
   id: string;
+  number?: JobNumber | undefined; // missing until the job-number migration is applied
   technicianId: string;
   project: string;
   customer: string;
@@ -50,6 +53,24 @@ export type Job = {
   cancellation?: Cancellation | undefined; // set when a supervisor removes the job
 };
 export type Technician = { id: string; name: string };
+
+/** The code people say, search for and print on labels, e.g. "J26-0042". */
+export function jobCode(job: Pick<Job, "id" | "number">): string {
+  if (!job.number) return job.id;
+  const year = String(job.number.year % 100).padStart(2, "0");
+  return `J${year}-${String(job.number.sequence).padStart(4, "0")}`;
+}
+
+function ordinal(n: number): string {
+  const lastTwo = n % 100;
+  if (lastTwo >= 11 && lastTwo <= 13) return `${n}th`;
+  return `${n}${({ 1: "st", 2: "nd", 3: "rd" } as Record<number, string>)[n % 10] ?? "th"}`;
+}
+
+/** Plain-language meaning of the job code, e.g. "42nd job of 2026". */
+export function jobNumberMeaning(job: Pick<Job, "number">): string | undefined {
+  return job.number ? `${ordinal(job.number.sequence)} job of ${job.number.year}` : undefined;
+}
 
 export const SUPERVISOR_PHONE = "+31612345678";
 
@@ -67,6 +88,7 @@ export function technicianName(id: string): string {
 export const jobs: Job[] = [
   {
     id: "J-2481",
+    number: { year: 2026, sequence: 1 },
     technicianId: "tech-a",
     project: "Boiler room renovation",
     customer: "Van Dijk Facilities",
@@ -112,6 +134,7 @@ export const jobs: Job[] = [
   },
   {
     id: "J-2482",
+    number: { year: 2026, sequence: 2 },
     technicianId: "tech-a",
     project: "Heat pump installation",
     customer: "Bakker & Zn",
@@ -145,6 +168,7 @@ export const jobs: Job[] = [
   },
   {
     id: "J-2490",
+    number: { year: 2026, sequence: 3 },
     technicianId: "tech-b",
     project: "Switchboard upgrade",
     customer: "De Groot Logistics",
@@ -177,6 +201,7 @@ export const jobs: Job[] = [
   },
   {
     id: "J-2491",
+    number: { year: 2026, sequence: 4 },
     technicianId: "tech-b",
     project: "Ventilation maintenance",
     customer: "Stadion Park Offices",

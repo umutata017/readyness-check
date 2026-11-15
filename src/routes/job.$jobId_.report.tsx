@@ -2,6 +2,8 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 import { ArrowLeft, Mic } from "lucide-react";
 import { AppShell } from "@/components/field/AppShell";
 import { FieldButton } from "@/components/field/FieldButton";
+import { jobCode } from "@/data/jobs";
+import { useTechnician } from "@/state/technician";
 
 export const Route = createFileRoute("/job/$jobId_/report")({
   head: () => ({
@@ -19,10 +21,11 @@ export const Route = createFileRoute("/job/$jobId_/report")({
 
 function ReportPlaceholder() {
   const { jobId } = Route.useParams();
+  const job = useTechnician().getJob(jobId);
   return (
     <AppShell
       title="Report"
-      eyebrow={jobId}
+      eyebrow={job ? jobCode(job) : jobId}
       bottom={
         <FieldButton asChild variant="tile" className="min-h-tap flex-row text-base">
           <Link to="/job/$jobId" params={{ jobId }}>

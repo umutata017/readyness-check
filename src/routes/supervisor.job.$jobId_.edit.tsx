@@ -3,6 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import { AppShell } from "@/components/field/AppShell";
 import { FieldButton } from "@/components/field/FieldButton";
 import { JobForm } from "@/components/field/JobForm";
+import { jobCode } from "@/data/jobs";
 import { useTechnician } from "@/state/technician";
 
 export const Route = createFileRoute("/supervisor/job/$jobId_/edit")({
@@ -34,7 +35,7 @@ function EditJob() {
   return (
     <AppShell
       title="Edit job"
-      eyebrow={job.id}
+      eyebrow={jobCode(job)}
       wide
       bottom={
         <FieldButton asChild variant="tile" className="flex-row text-base">

@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import {
   CANCEL_REASON_LABELS,
+  jobCode,
   technicianName,
   type CancelReason,
   type ItemKind,
@@ -27,6 +28,8 @@ type JobRow = {
   job_type: string;
   status: Job["status"];
   workspace_available: boolean;
+  job_year?: number | null;
+  job_seq?: number | null;
   cancel_reason?: CancelReason | null;
   cancel_note?: string | null;
   cancelled_at?: string | null;
@@ -89,6 +92,7 @@ export function formatTime(iso: string): string {
 function mapJob(job: JobRow, tasks: TaskRow[], items: ItemRow[], updates: UpdateRow[]): Job {
   return {
     id: job.id,
+    number: job.job_year && job.job_seq ? { year: job.job_year, sequence: job.job_seq } : undefined,
     technicianId: job.technician_id,
     project: job.project,
     customer: job.customer,
@@ -168,6 +172,45 @@ export function nextJobId(jobs: Job[]): string {
   return `J-${max + 1}`;
 }
 
+/** Lowercase letters and digits only, so "J26-0042", "j26 0042" and "J260042" compare equal. */
+function compact(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+/**
+ * True when the job matches a search on job number, project, customer or address.
+ * "J26-0042", "j26 42", "26-42", "0042" and "42" all find the 42nd job of 2026.
+ */
+export function matchesJobSearch(job: Job, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  if (/^\d+$/.test(q)) {
+    // A bare number is the job's place in its year ("42" or "0042"), or a legacy id ("2481").
+    if (job.number?.sequence === Number(q)) return true;
+    if (compact(job.id).endsWith(q)) return true;
+  } else {
+    // Year and number written separately: "26-42", "J26 0042", "j26/42".
+    const parts = q.match(/^j?\s*(\d{2})\s*[-/\s]\s*(\d+)$/);
+    if (
+      parts &&
+      job.number &&
+      job.number.year % 100 === Number(parts[1]) &&
+      job.number.sequence === Number(parts[2])
+    ) {
+      return true;
+    }
+    // A full or partly typed code: "J260042", "J26-00".
+    const typed = compact(q);
+    if (/^j\d/.test(typed) && compact(jobCode(job)).startsWith(typed)) return true;
+    if (typed === compact(job.id)) return true;
+  }
+  return [job.project, job.customer, job.address].some((value) =>
+    value.toLowerCase().includes(q),
+  );
+}
+
+const UNIQUE_VIOLATION = "23505";
+
 export type NewJobInput = {
   project: string;
   customer: string;
@@ -226,22 +269,27 @@ function yn(value: boolean): string {
 }
 
 export async function createJob(input: NewJobInput, at = new Date().toISOString()): Promise<Job> {
-  const jobs = await getJobs();
-  const id = nextJobId(jobs);
-  const { error: jobError } = await supabase.from("jobs").insert({
-    id,
-    technician_id: input.technicianId,
-    project: input.project,
-    customer: input.customer,
-    address: input.address,
-    timeslot: input.timeslot,
-    job_type: input.jobType,
-    status: "not-started",
-    workspace_available: input.workspaceAvailable,
-    created_at: at,
-    updated_at: at,
-  });
-  throwIfError(jobError);
+  // Job numbers are claimed by inserting the row. If another device took the
+  // same number a moment earlier, reload and take the next free one.
+  let id = "";
+  for (let attempt = 0; ; attempt += 1) {
+    id = nextJobId(await getJobs());
+    const { error: jobError } = await supabase.from("jobs").insert({
+      id,
+      technician_id: input.technicianId,
+      project: input.project,
+      customer: input.customer,
+      address: input.address,
+      timeslot: input.timeslot,
+      job_type: input.jobType,
+      status: "not-started",
+      workspace_available: input.workspaceAvailable,
+      created_at: at,
+      updated_at: at,
+    });
+    if (!jobError) break;
+    if (jobError.code !== UNIQUE_VIOLATION || attempt >= 4) throwIfError(jobError);
+  }
 
   const tasks = input.tasks.filter(Boolean).map((label, position) => ({
     id: `${id}-t${position + 1}`,

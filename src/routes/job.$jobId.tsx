@@ -5,9 +5,11 @@ import {
   ArrowRight,
   CheckCircle2,
   Clock,
+  Hash,
   MapPin,
   User,
 } from "lucide-react";
+import { jobCode, jobNumberMeaning } from "@/data/jobs";
 import { AppShell } from "@/components/field/AppShell";
 import { FieldButton } from "@/components/field/FieldButton";
 import { CancelNotice } from "@/components/field/CancelNotice";
@@ -51,7 +53,7 @@ function JobDetail() {
   return (
     <AppShell
       title={job.project}
-      eyebrow={job.id}
+      eyebrow={jobCode(job)}
       bottom={
         <FieldButton asChild variant="tile" className="min-h-tap flex-row text-base">
           <Link to="/">
@@ -62,6 +64,10 @@ function JobDetail() {
     >
       {job.cancellation && <CancelNotice cancellation={job.cancellation} />}
       <section className="space-y-3 rounded-3xl border border-border bg-card p-5 text-lg">
+        <Info
+          icon={<Hash className="size-5" />}
+          text={jobNumberMeaning(job) ? `${jobCode(job)} · ${jobNumberMeaning(job)}` : jobCode(job)}
+        />
         <Info icon={<User className="size-5" />} text={job.customer} />
         <Info icon={<MapPin className="size-5" />} text={job.address} />
         <Info icon={<Clock className="size-5" />} text={job.timeslot} strong />

@@ -1,13 +1,13 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Plus, RotateCcw } from "lucide-react";
+import { Plus, RotateCcw, Search } from "lucide-react";
 import { AppShell } from "@/components/field/AppShell";
 import { FieldButton } from "@/components/field/FieldButton";
-import { FieldLabel, FieldSelect } from "@/components/field/inputs";
+import { FieldLabel, FieldSelect, TextInput } from "@/components/field/inputs";
 import { JobCard } from "@/components/field/JobCard";
 import { RoleSwitcher } from "@/components/field/RoleSwitcher";
 import { technicians } from "@/data/jobs";
-import { displayStatus } from "@/data/store";
+import { displayStatus, matchesJobSearch } from "@/data/store";
 import { useTechnician } from "@/state/technician";
 
 export const Route = createFileRoute("/supervisor/")({
@@ -34,9 +34,11 @@ function SupervisorJobs() {
   const { jobs, openUpdate, resetDemo } = useTechnician();
   const [technician, setTechnician] = useState("all");
   const [status, setStatus] = useState("all");
+  const [search, setSearch] = useState("");
   const [confirmReset, setConfirmReset] = useState(false);
   const filtered = jobs.filter(
     (job) =>
+      matchesJobSearch(job, search) &&
       (technician === "all" || job.technicianId === technician) &&
       (status === "all" || displayStatus(job, Boolean(openUpdate(job))) === status),
   );
@@ -52,6 +54,19 @@ function SupervisorJobs() {
           New job
         </Link>
       </FieldButton>
+      <label className="block">
+        <FieldLabel>Find a job</FieldLabel>
+        <span className="relative block">
+          <Search className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" aria-hidden />
+          <TextInput
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Job number (e.g. J26-0042), customer or address"
+            className="pl-12"
+          />
+        </span>
+      </label>
       <div className="grid gap-3 sm:grid-cols-2">
         <label>
           <FieldLabel>Technician</FieldLabel>

@@ -34,6 +34,28 @@ export type UpdateEntry = {
   notify: boolean; // whether the technician gets a banner for this update
   seenAt?: string | undefined; // set when the technician taps "Seen"
 };
+export type PartOrderStatus = "requested" | "ordered" | "delivered" | "cancelled";
+export const PART_ORDER_STATUS_LABELS: Record<PartOrderStatus, string> = {
+  requested: "Requested",
+  ordered: "Ordered",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
+};
+/** A part ordered for a job. `seq` numbers the orders within the job: J26-0042-P1, -P2, … */
+export type PartOrder = {
+  id: string;
+  seq: number;
+  part: string;
+  quantity: number;
+  note?: string | undefined;
+  status: PartOrderStatus;
+  requestedBy: string; // technician id or "supervisor"
+  createdAt: string;
+  orderedAt?: string | undefined;
+  deliveredAt?: string | undefined;
+  cancelledAt?: string | undefined;
+};
+
 /** Year-based job number, e.g. J26-0042 = the 42nd job created in 2026. */
 export type JobNumber = { year: number; sequence: number };
 export type Job = {
@@ -50,6 +72,7 @@ export type Job = {
   items: RequiredItem[];
   workspaceAvailable: boolean;
   history: UpdateEntry[];
+  parts?: PartOrder[] | undefined; // empty until the part-orders migration is applied
   cancellation?: Cancellation | undefined; // set when a supervisor removes the job
 };
 export type Technician = { id: string; name: string };
@@ -65,6 +88,21 @@ function ordinal(n: number): string {
   const lastTwo = n % 100;
   if (lastTwo >= 11 && lastTwo <= 13) return `${n}th`;
   return `${n}${({ 1: "st", 2: "nd", 3: "rd" } as Record<number, string>)[n % 10] ?? "th"}`;
+}
+
+/** Order number that carries the job number, e.g. "J26-0042-P1". */
+export function partOrderCode(job: Pick<Job, "id" | "number">, order: Pick<PartOrder, "seq">): string {
+  return `${jobCode(job)}-P${order.seq}`;
+}
+
+/** Orders still waiting for something: requested or ordered, not yet delivered. */
+export function openPartOrders(job: Pick<Job, "parts">): PartOrder[] {
+  return (job.parts ?? []).filter((o) => o.status === "requested" || o.status === "ordered");
+}
+
+/** Who asked for the part, in words. */
+export function requesterName(requestedBy: string): string {
+  return requestedBy === "supervisor" ? "Supervisor" : technicianName(requestedBy);
 }
 
 /** Plain-language meaning of the job code, e.g. "42nd job of 2026". */

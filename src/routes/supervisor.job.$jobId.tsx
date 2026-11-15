@@ -4,6 +4,7 @@ import { AppShell } from "@/components/field/AppShell";
 import { FieldButton } from "@/components/field/FieldButton";
 import { CancelNotice } from "@/components/field/CancelNotice";
 import { JobHistory } from "@/components/field/JobHistory";
+import { PartsPanel } from "@/components/field/PartsPanel";
 import { RemoveJobPanel } from "@/components/field/RemoveJobPanel";
 import { jobCode, jobNumberMeaning, technicianName } from "@/data/jobs";
 import { openEntries } from "@/data/store";
@@ -31,6 +32,7 @@ function SupervisorJob() {
     <section><h2 className="mb-3 text-sm font-extrabold uppercase tracking-widest text-muted-foreground">Tasks</h2><ol className="space-y-2">{job.tasks.map((task, i) => <li key={task.id} className={`flex items-center gap-3 rounded-2xl p-4 font-semibold ${changed.has(task.id) ? "border-2 border-change-border bg-change-surface" : "border border-border bg-card"}`}><span className="font-bold">{i + 1}</span><span className="min-w-0 break-words">{task.label}</span>{changed.has(task.id) && <AlertTriangle className="ml-auto size-5 shrink-0 text-change" />}</li>)}</ol></section>
     {updates.length > 0 && <section className="space-y-3 border-l-4 border-change-border pl-4"><h2 className="font-display text-xl text-change">Update</h2>{updates.map((entry) => <div key={entry.id}><p className="text-sm font-bold text-muted-foreground">{entry.field}</p><p className="flex flex-wrap items-center gap-2 font-bold">{entry.oldValue && <><span className="text-muted-foreground line-through">{entry.oldValue}</span><ArrowRight className="size-4" /></>}<span>{entry.newValue}</span></p>{entry.message && <p className="text-muted-foreground">“{entry.message}”</p>}</div>)}<p className="text-sm font-bold text-change">Not seen yet</p></section>}
     <section><h2 className="mb-3 text-sm font-extrabold uppercase tracking-widest text-muted-foreground">Required items</h2><ul className="divide-y divide-border">{job.items.map((item) => <li key={item.id} className="flex flex-wrap justify-between gap-2 py-3 font-semibold"><span>{item.label}</span><span className="text-sm capitalize text-muted-foreground">{item.kind}</span></li>)}</ul><p className={`mt-3 flex items-center gap-2 font-bold ${job.workspaceAvailable ? "text-success" : "text-change"}`}>{job.workspaceAvailable ? <CheckCircle2 className="size-5" /> : <AlertTriangle className="size-5" />}Workspace {job.workspaceAvailable ? "available" : "not available"}</p></section>
+    <PartsPanel job={job} role="supervisor" />
     <JobHistory job={job} />
     <div className="grid gap-3 sm:grid-cols-2"><FieldButton variant="tile" disabled><ClipboardCheck className="size-6" />Ready check · Not available yet</FieldButton><FieldButton variant="tile" disabled><Mic className="size-6" />Report · Not available yet</FieldButton></div>
     {!job.cancellation && <RemoveJobPanel jobId={job.id} />}

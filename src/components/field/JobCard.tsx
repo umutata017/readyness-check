@@ -1,6 +1,12 @@
 import { Link } from "@tanstack/react-router";
-import { AlertTriangle, ChevronRight, Clock, Hash, MapPin, User, XCircle } from "lucide-react";
-import { CANCEL_REASON_LABELS, jobCode, jobNumberMeaning, type Job } from "@/data/jobs";
+import { AlertTriangle, ChevronRight, Clock, Hash, MapPin, Package, User, XCircle } from "lucide-react";
+import {
+  CANCEL_REASON_LABELS,
+  jobCode,
+  jobNumberMeaning,
+  openPartOrders,
+  type Job,
+} from "@/data/jobs";
 import type { DisplayStatus } from "@/data/store";
 import { cn } from "@/lib/utils";
 
@@ -61,9 +67,30 @@ export function JobCard({ job, status, detailPath = "/job/$jobId" }: { job: Job;
         <p className="flex items-center gap-2 font-medium"><MapPin className="size-4 shrink-0" />{job.address}</p>
         <p className="flex items-center gap-2 font-bold"><Clock className="size-4 shrink-0" />{job.timeslot}</p>
       </div>
-      <div className="mt-3 flex items-center justify-end gap-1 text-sm font-bold">
-        Open job <ChevronRight className="size-4" />
+      <div className="mt-3 flex items-center justify-between gap-2 text-sm font-bold">
+        <PartsSummary job={job} />
+        <span className="ml-auto flex items-center gap-1">
+          Open job <ChevronRight className="size-4" />
+        </span>
       </div>
     </Link>
+  );
+}
+
+/** "2 parts to order · 1 on the way" — only shown while orders are open. */
+function PartsSummary({ job }: { job: Job }) {
+  const open = openPartOrders(job);
+  if (open.length === 0 || job.cancellation) return null;
+  const requested = open.filter((order) => order.status === "requested").length;
+  const ordered = open.length - requested;
+  const parts = [
+    requested && `${requested} ${requested === 1 ? "part" : "parts"} to order`,
+    ordered && `${ordered} on the way`,
+  ].filter(Boolean);
+  return (
+    <span className="flex items-center gap-1.5 rounded-full border border-input bg-accent px-3 py-1 text-foreground">
+      <Package className="size-4 shrink-0" aria-hidden />
+      {parts.join(" · ")}
+    </span>
   );
 }

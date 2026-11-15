@@ -1,9 +1,17 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { supabase, supabaseConfigured } from "@/lib/supabase";
-import { technicians, type CancelReason, type Job, type UpdateEntry } from "@/data/jobs";
+import {
+  technicians,
+  type CancelReason,
+  type Job,
+  type PartOrderStatus,
+  type UpdateEntry,
+} from "@/data/jobs";
 import {
   cancelJob as storeCancelJob,
   createJob as storeCreateJob,
+  createPartOrder,
+  setPartOrderStatus as storeSetPartOrderStatus,
   editJob as storeEditJob,
   getJobs,
   latestOpenEntry,
@@ -16,6 +24,7 @@ import {
   resetDemoData as storeResetDemoData,
   type JobChanges,
   type NewJobInput,
+  type NewPartOrderInput,
 } from "@/data/store";
 
 const DEFAULT_TECHNICIAN_ID = "tech-a";
@@ -50,6 +59,9 @@ type TechnicianContextValue = {
     opts: { message?: string; notify: boolean },
   ) => Promise<void>;
   cancelJob: (id: string, reason: CancelReason, note?: string) => Promise<void>;
+  /** Returns the new order's number within the job (1 → "-P1"). */
+  orderPart: (jobId: string, input: NewPartOrderInput) => Promise<number>;
+  setPartOrderStatus: (orderId: string, status: PartOrderStatus) => Promise<void>;
   resetDemo: () => Promise<void>;
 };
 
@@ -112,6 +124,11 @@ export function TechnicianProvider({ children }: { children: ReactNode }) {
         { event: "*", schema: "public", table: "job_updates" },
         () => void loadJobs(),
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "part_orders" },
+        () => void loadJobs(),
+      )
       .subscribe((status) => {
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
           setBackendError(
@@ -167,6 +184,16 @@ export function TechnicianProvider({ children }: { children: ReactNode }) {
     reassignJob: (id, technicianId, opts) =>
       runMutation(() => storeReassignJob(id, technicianId, opts)),
     cancelJob: (id, reason, note) => runMutation(() => storeCancelJob(id, reason, note)),
+    // Order errors (empty part name, missing table) are shown in the form, not as a full-screen outage.
+    orderPart: async (jobId, input) => {
+      const seq = await createPartOrder(jobId, input);
+      await loadJobs();
+      return seq;
+    },
+    setPartOrderStatus: async (orderId, status) => {
+      await storeSetPartOrderStatus(orderId, status);
+      await loadJobs();
+    },
     resetDemo: () => runMutation(storeResetDemoData),
   };
 

@@ -2,10 +2,13 @@ import { supabase } from "@/lib/supabase";
 import {
   CANCEL_REASON_LABELS,
   jobCode,
+  partOrderCode,
   technicianName,
   type CancelReason,
   type ItemKind,
   type Job,
+  type PartOrder,
+  type PartOrderStatus,
   type UpdateEntry,
 } from "./jobs";
 
@@ -59,6 +62,44 @@ type UpdateRow = {
   seen_at: string | null;
 };
 
+type PartOrderRow = {
+  id: string;
+  job_id: string;
+  seq: number;
+  part: string;
+  quantity: number;
+  note: string | null;
+  status: PartOrderStatus;
+  requested_by: string;
+  created_at: string;
+  ordered_at: string | null;
+  delivered_at: string | null;
+  cancelled_at: string | null;
+};
+
+function mapPartOrder(row: PartOrderRow): PartOrder {
+  return {
+    id: row.id,
+    seq: row.seq,
+    part: row.part,
+    quantity: row.quantity,
+    note: row.note ?? undefined,
+    status: row.status,
+    requestedBy: row.requested_by,
+    createdAt: row.created_at,
+    orderedAt: row.ordered_at ?? undefined,
+    deliveredAt: row.delivered_at ?? undefined,
+    cancelledAt: row.cancelled_at ?? undefined,
+  };
+}
+
+/** True when Supabase says a table does not exist yet (its migration has not been run). */
+function isMissingTable(error: { code?: string; message: string } | null): boolean {
+  return Boolean(
+    error && (error.code === "42P01" || error.code === "PGRST205" || /could not find the table/i.test(error.message)),
+  );
+}
+
 function throwIfError(error: { message: string } | null): void {
   if (error) throw new Error(error.message);
 }
@@ -89,7 +130,13 @@ export function formatTime(iso: string): string {
   });
 }
 
-function mapJob(job: JobRow, tasks: TaskRow[], items: ItemRow[], updates: UpdateRow[]): Job {
+function mapJob(
+  job: JobRow,
+  tasks: TaskRow[],
+  items: ItemRow[],
+  updates: UpdateRow[],
+  parts: PartOrderRow[] = [],
+): Job {
   return {
     id: job.id,
     number: job.job_year && job.job_seq ? { year: job.job_year, sequence: job.job_seq } : undefined,
@@ -115,6 +162,10 @@ function mapJob(job: JobRow, tasks: TaskRow[], items: ItemRow[], updates: Update
         locationStatus: item.location_status ?? undefined,
       })),
     workspaceAvailable: job.workspace_available,
+    parts: parts
+      .filter((order) => order.job_id === job.id)
+      .sort((a, b) => a.seq - b.seq)
+      .map(mapPartOrder),
     cancellation: job.cancel_reason
       ? {
           reason: job.cancel_reason,
@@ -141,16 +192,20 @@ function mapJob(job: JobRow, tasks: TaskRow[], items: ItemRow[], updates: Update
 }
 
 export async function getJobs(): Promise<Job[]> {
-  const [jobsResult, tasksResult, itemsResult, updatesResult] = await Promise.all([
+  const [jobsResult, tasksResult, itemsResult, updatesResult, partsResult] = await Promise.all([
     supabase.from("jobs").select("*"),
     supabase.from("job_tasks").select("*"),
     supabase.from("required_items").select("*"),
     supabase.from("job_updates").select("*"),
+    supabase.from("part_orders").select("*"),
   ]);
   throwIfError(jobsResult.error);
   throwIfError(tasksResult.error);
   throwIfError(itemsResult.error);
   throwIfError(updatesResult.error);
+  // Before the part-orders migration is run the app keeps working, just without parts.
+  if (!isMissingTable(partsResult.error)) throwIfError(partsResult.error);
+  const partRows = partsResult.error ? [] : ((partsResult.data ?? []) as PartOrderRow[]);
 
   return (jobsResult.data as JobRow[])
     .sort((a, b) => a.id.localeCompare(b.id))
@@ -160,6 +215,7 @@ export async function getJobs(): Promise<Job[]> {
         (tasksResult.data ?? []) as TaskRow[],
         (itemsResult.data ?? []) as ItemRow[],
         (updatesResult.data ?? []) as UpdateRow[],
+        partRows,
       ),
     );
 }
@@ -203,8 +259,12 @@ export function matchesJobSearch(job: Job, query: string): boolean {
     const typed = compact(q);
     if (/^j\d/.test(typed) && compact(jobCode(job)).startsWith(typed)) return true;
     if (typed === compact(job.id)) return true;
+    // A part order number: "J26-0042-P1".
+    if (/^j\d+p\d+$/.test(typed)) {
+      return (job.parts ?? []).some((order) => compact(partOrderCode(job, order)) === typed);
+    }
   }
-  return [job.project, job.customer, job.address].some((value) =>
+  return [job.project, job.customer, job.address, ...(job.parts ?? []).map((o) => o.part)].some((value) =>
     value.toLowerCase().includes(q),
   );
 }
@@ -603,6 +663,86 @@ export async function markJobReady(id: string, at = new Date().toISOString()): P
       })
     ).error,
   );
+}
+
+export type NewPartOrderInput = {
+  part: string;
+  quantity: number;
+  note?: string | undefined;
+  requestedBy: string; // technician id or "supervisor"
+};
+
+/** Next order number within a job: P1, P2, … */
+export function nextPartOrderSeq(job: Pick<Job, "parts">): number {
+  return (job.parts ?? []).reduce((max, order) => Math.max(max, order.seq), 0) + 1;
+}
+
+/** Order a part for a job. Returns the new order's per-job sequence number. */
+export async function createPartOrder(
+  jobId: string,
+  input: NewPartOrderInput,
+  at = new Date().toISOString(),
+): Promise<number> {
+  const part = input.part.trim();
+  if (!part) throw new Error("Enter the part you need.");
+  if (!Number.isInteger(input.quantity) || input.quantity < 1) {
+    throw new Error("Quantity must be at least 1.");
+  }
+  // Like job numbers: claim the next number by inserting; retry if another device was quicker.
+  for (let attempt = 0; ; attempt += 1) {
+    const job = (await getJobs()).find((candidate) => candidate.id === jobId);
+    if (!job) throw new Error(`Job ${jobId} was not found.`);
+    if (job.cancellation) throw new Error("This job was cancelled, so parts can no longer be ordered.");
+    const seq = nextPartOrderSeq(job);
+    const { error } = await supabase.from("part_orders").insert({
+      id: `${jobId}-p${seq}`,
+      job_id: jobId,
+      seq,
+      part,
+      quantity: input.quantity,
+      note: input.note?.trim() || null,
+      status: "requested",
+      requested_by: input.requestedBy,
+      created_at: at,
+    });
+    if (!error) return seq;
+    if (isMissingTable(error)) {
+      throw new Error("Parts ordering is not set up in the database yet. Run the part-orders migration.");
+    }
+    if (error.code !== UNIQUE_VIOLATION || attempt >= 4) throwIfError(error);
+  }
+}
+
+/** Which status an order may move to next. */
+export const PART_ORDER_NEXT: Record<PartOrderStatus, PartOrderStatus[]> = {
+  requested: ["ordered", "cancelled"],
+  ordered: ["delivered", "cancelled"],
+  delivered: [],
+  cancelled: [],
+};
+
+export async function setPartOrderStatus(
+  orderId: string,
+  status: PartOrderStatus,
+  at = new Date().toISOString(),
+): Promise<void> {
+  const timestamp = {
+    requested: {},
+    ordered: { ordered_at: at },
+    delivered: { delivered_at: at },
+    cancelled: { cancelled_at: at },
+  }[status];
+  const allowedFrom = (Object.keys(PART_ORDER_NEXT) as PartOrderStatus[]).filter((from) =>
+    PART_ORDER_NEXT[from].includes(status),
+  );
+  const { data, error } = await supabase
+    .from("part_orders")
+    .update({ status, ...timestamp })
+    .eq("id", orderId)
+    .in("status", allowedFrom)
+    .select("id");
+  throwIfError(error);
+  if (!data?.length) throw new Error("This order was already updated on another device. Reload to see it.");
 }
 
 export async function resetDemoData(): Promise<void> {

@@ -1,10 +1,10 @@
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
-import { AlertTriangle, ArrowLeft, CheckCircle2, ClipboardCheck } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, ClipboardCheck, Package } from "lucide-react";
 import { useState } from "react";
 import { AppShell } from "@/components/field/AppShell";
 import { CancelNotice } from "@/components/field/CancelNotice";
 import { FieldButton } from "@/components/field/FieldButton";
-import { jobCode } from "@/data/jobs";
+import { jobCode, PART_ORDER_STATUS_LABELS, partOrderCode, openPartOrders, type Job } from "@/data/jobs";
 import { readyCheckSummary, type ReadyCheckStatus } from "@/data/store";
 import { useTechnician } from "@/state/technician";
 
@@ -135,6 +135,9 @@ function ReadyCheck() {
                     </button>
                   ))}
                 </div>
+                {status === "missing" && item.kind !== "personnel" && !job.cancellation && (
+                  <QuickOrder job={job} part={item.label} />
+                )}
               </div>
             );
           })}
@@ -209,5 +212,60 @@ function ReadyCheck() {
         </p>
       )}
     </AppShell>
+  );
+}
+
+/** For a missing item: order it in one tap, or show the order that is already open for it. */
+function QuickOrder({ job, part }: { job: Job; part: string }) {
+  const { orderPart, technicianId } = useTechnician();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const existing = openPartOrders(job).find(
+    (order) => order.part.trim().toLowerCase() === part.trim().toLowerCase(),
+  );
+
+  if (existing) {
+    return (
+      <p className="mt-3 flex items-center gap-2 rounded-2xl border border-input bg-accent px-4 py-3 text-sm font-bold">
+        <Package className="size-5 shrink-0" />
+        <span>
+          {PART_ORDER_STATUS_LABELS[existing.status]} · {partOrderCode(job, existing)}
+        </span>
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-3">
+      <FieldButton
+        variant="change"
+        className="text-base"
+        disabled={saving}
+        onClick={async () => {
+          setSaving(true);
+          setError(null);
+          try {
+            await orderPart(job.id, {
+              part,
+              quantity: 1,
+              note: "Missing during ready check",
+              requestedBy: technicianId,
+            });
+          } catch (err) {
+            setError(err instanceof Error ? err.message : "The part could not be ordered.");
+          } finally {
+            setSaving(false);
+          }
+        }}
+      >
+        <Package className="size-5" />
+        {saving ? "Ordering…" : "Order this part"}
+      </FieldButton>
+      {error && (
+        <p role="alert" className="mt-2 text-sm font-semibold text-cancel-foreground">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }

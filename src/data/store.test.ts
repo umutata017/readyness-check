@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { jobCode, jobNumberMeaning, jobs } from "./jobs";
-import { displayStatus, matchesJobSearch, nextJobId, openEntries } from "./store";
+import { jobCode, jobNumberMeaning, jobs, openPartOrders, partOrderCode } from "./jobs";
+import {
+  displayStatus,
+  matchesJobSearch,
+  nextJobId,
+  nextPartOrderSeq,
+  openEntries,
+  PART_ORDER_NEXT,
+} from "./store";
 
 describe("Supabase job data helpers", () => {
   it("finds the seeded unseen update", () => {
@@ -39,6 +46,31 @@ describe("Supabase job data helpers", () => {
     expect(matchesJobSearch(job, "utrecht")).toBe(true);
     expect(matchesJobSearch(job, "rotterdam")).toBe(false);
     expect(matchesJobSearch(job, "")).toBe(true);
+  });
+
+  it("numbers part orders from the job number", () => {
+    const job = {
+      ...jobs[0]!,
+      number: { year: 2026, sequence: 42 },
+      parts: [
+        { id: "a", seq: 1, part: "Flue kit 150 mm", quantity: 1, status: "delivered" as const, requestedBy: "tech-a", createdAt: "2026-11-15T09:00:00Z" },
+        { id: "b", seq: 2, part: "Wall bracket", quantity: 2, status: "requested" as const, requestedBy: "supervisor", createdAt: "2026-11-15T10:00:00Z" },
+      ],
+    };
+    expect(partOrderCode(job, job.parts[1]!)).toBe("J26-0042-P2");
+    expect(nextPartOrderSeq(job)).toBe(3);
+    expect(nextPartOrderSeq({ parts: [] })).toBe(1);
+    expect(openPartOrders(job).map((o) => o.seq)).toEqual([2]);
+    expect(matchesJobSearch(job, "J26-0042-P2")).toBe(true);
+    expect(matchesJobSearch(job, "j26 0042 p1")).toBe(true);
+    expect(matchesJobSearch(job, "J26-0042-P9")).toBe(false);
+    expect(matchesJobSearch(job, "wall bracket")).toBe(true);
+  });
+
+  it("only lets a part order move forward", () => {
+    expect(PART_ORDER_NEXT.requested).toEqual(["ordered", "cancelled"]);
+    expect(PART_ORDER_NEXT.ordered).toEqual(["delivered", "cancelled"]);
+    expect(PART_ORDER_NEXT.delivered).toEqual([]);
   });
 
   it("shows a cancelled job as cancelled even when it has an unseen update", () => {

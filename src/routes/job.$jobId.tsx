@@ -14,6 +14,7 @@ import { AppShell } from "@/components/field/AppShell";
 import { FieldButton } from "@/components/field/FieldButton";
 import { CancelNotice } from "@/components/field/CancelNotice";
 import { JobActions } from "@/components/field/JobActions";
+import { PartsPanel } from "@/components/field/PartsPanel";
 import { openEntries } from "@/data/store";
 import { useTechnician } from "@/state/technician";
 
@@ -160,6 +161,8 @@ function JobDetail() {
           )}
         </section>
       )}
+
+      <PartsPanel job={job} role="technician" />
 
       <JobActions job={job} />
     </AppShell>

@@ -14,7 +14,10 @@ import { AppShell } from "@/components/field/AppShell";
 import { FieldButton } from "@/components/field/FieldButton";
 import { CancelNotice } from "@/components/field/CancelNotice";
 import { JobActions } from "@/components/field/JobActions";
+import { FilesPanel } from "@/components/field/FilesPanel";
 import { PartsPanel } from "@/components/field/PartsPanel";
+import { PhotosPanel } from "@/components/field/PhotosPanel";
+import { jobTimeslot } from "@/data/planning";
 import { openEntries } from "@/data/store";
 import { useTechnician } from "@/state/technician";
 
@@ -71,7 +74,7 @@ function JobDetail() {
         />
         <Info icon={<User className="size-5" />} text={job.customer} />
         <Info icon={<MapPin className="size-5" />} text={job.address} />
-        <Info icon={<Clock className="size-5" />} text={job.timeslot} strong />
+        <Info icon={<Clock className="size-5" />} text={jobTimeslot(job)} strong />
       </section>
 
       <section>
@@ -163,6 +166,10 @@ function JobDetail() {
       )}
 
       <PartsPanel job={job} role="technician" />
+
+      <PhotosPanel job={job} role="technician" />
+
+      <FilesPanel job={job} role="technician" />
 
       <JobActions job={job} />
     </AppShell>

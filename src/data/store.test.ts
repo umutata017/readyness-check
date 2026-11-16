@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import { jobCode, jobNumberMeaning, jobs, openPartOrders, partOrderCode } from "./jobs";
 import {
   displayStatus,
+  formatFileSize,
   matchesJobSearch,
+  randomId,
+  safeFileName,
   nextJobId,
   nextPartOrderSeq,
   openEntries,
@@ -65,6 +68,32 @@ describe("Supabase job data helpers", () => {
     expect(matchesJobSearch(job, "j26 0042 p1")).toBe(true);
     expect(matchesJobSearch(job, "J26-0042-P9")).toBe(false);
     expect(matchesJobSearch(job, "wall bracket")).toBe(true);
+  });
+
+  it("makes uploaded file names safe for storage", () => {
+    expect(safeFileName("Materiaallijst J26-0001.xlsx")).toBe("Materiaallijst-J26-0001.xlsx");
+    expect(safeFileName("Offerte (definitief) – €.pdf")).toBe("Offerte-definitief-.pdf");
+    expect(safeFileName("../../etc/passwd")).toBe("etc-passwd");
+    expect(safeFileName("???")).toBe("file");
+  });
+
+  it("creates unique storage ids even where crypto.randomUUID is missing (http on a phone)", () => {
+    const original = globalThis.crypto.randomUUID;
+    try {
+      Object.defineProperty(globalThis.crypto, "randomUUID", { value: undefined, configurable: true });
+      const a = randomId();
+      const b = randomId();
+      expect(a).toMatch(/^[0-9a-f]{32}$/);
+      expect(a).not.toBe(b);
+    } finally {
+      Object.defineProperty(globalThis.crypto, "randomUUID", { value: original, configurable: true });
+    }
+  });
+
+  it("shows file sizes in readable units", () => {
+    expect(formatFileSize(512)).toBe("512 B");
+    expect(formatFileSize(820 * 1024)).toBe("820 KB");
+    expect(formatFileSize(3.4 * 1024 * 1024)).toBe("3.4 MB");
   });
 
   it("only lets a part order move forward", () => {

@@ -11,9 +11,11 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LandingRouteImport } from './routes/landing'
+import { Route as PlanningRouteImport } from './routes/planning'
 import { Route as JobJobIdRouteImport } from './routes/job.$jobId'
 import { Route as SupervisorIndexRouteImport } from './routes/supervisor.index'
 import { Route as SupervisorNewRouteImport } from './routes/supervisor.new'
+import { Route as SupervisorPlanningRouteImport } from './routes/supervisor.planning'
 import { Route as JobJobIdReadyCheckRouteImport } from './routes/job.$jobId_.ready-check'
 import { Route as JobJobIdReportRouteImport } from './routes/job.$jobId_.report'
 import { Route as SupervisorJobJobIdRouteImport } from './routes/supervisor.job.$jobId'
@@ -29,6 +31,11 @@ const LandingRoute = LandingRouteImport.update({
   path: '/landing',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlanningRoute = PlanningRouteImport.update({
+  id: '/planning',
+  path: '/planning',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const JobJobIdRoute = JobJobIdRouteImport.update({
   id: '/job/$jobId',
   path: '/job/$jobId',
@@ -42,6 +49,11 @@ const SupervisorIndexRoute = SupervisorIndexRouteImport.update({
 const SupervisorNewRoute = SupervisorNewRouteImport.update({
   id: '/supervisor/new',
   path: '/supervisor/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SupervisorPlanningRoute = SupervisorPlanningRouteImport.update({
+  id: '/supervisor/planning',
+  path: '/supervisor/planning',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JobJobIdReadyCheckRoute = JobJobIdReadyCheckRouteImport.update({
@@ -68,8 +80,10 @@ const SupervisorJobJobIdEditRoute = SupervisorJobJobIdEditRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/landing': typeof LandingRoute
+  '/planning': typeof PlanningRoute
   '/job/$jobId': typeof JobJobIdRoute
   '/supervisor/new': typeof SupervisorNewRoute
+  '/supervisor/planning': typeof SupervisorPlanningRoute
   '/supervisor/': typeof SupervisorIndexRoute
   '/job/$jobId/ready-check': typeof JobJobIdReadyCheckRoute
   '/job/$jobId/report': typeof JobJobIdReportRoute
@@ -79,8 +93,10 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/landing': typeof LandingRoute
+  '/planning': typeof PlanningRoute
   '/job/$jobId': typeof JobJobIdRoute
   '/supervisor/new': typeof SupervisorNewRoute
+  '/supervisor/planning': typeof SupervisorPlanningRoute
   '/supervisor': typeof SupervisorIndexRoute
   '/job/$jobId/ready-check': typeof JobJobIdReadyCheckRoute
   '/job/$jobId/report': typeof JobJobIdReportRoute
@@ -91,8 +107,10 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/landing': typeof LandingRoute
+  '/planning': typeof PlanningRoute
   '/job/$jobId': typeof JobJobIdRoute
   '/supervisor/new': typeof SupervisorNewRoute
+  '/supervisor/planning': typeof SupervisorPlanningRoute
   '/supervisor/': typeof SupervisorIndexRoute
   '/job/$jobId_/ready-check': typeof JobJobIdReadyCheckRoute
   '/job/$jobId_/report': typeof JobJobIdReportRoute
@@ -104,8 +122,10 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/landing'
+    | '/planning'
     | '/job/$jobId'
     | '/supervisor/new'
+    | '/supervisor/planning'
     | '/supervisor/'
     | '/job/$jobId/ready-check'
     | '/job/$jobId/report'
@@ -115,8 +135,10 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/landing'
+    | '/planning'
     | '/job/$jobId'
     | '/supervisor/new'
+    | '/supervisor/planning'
     | '/supervisor'
     | '/job/$jobId/ready-check'
     | '/job/$jobId/report'
@@ -126,8 +148,10 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/landing'
+    | '/planning'
     | '/job/$jobId'
     | '/supervisor/new'
+    | '/supervisor/planning'
     | '/supervisor/'
     | '/job/$jobId_/ready-check'
     | '/job/$jobId_/report'
@@ -138,8 +162,10 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LandingRoute: typeof LandingRoute
+  PlanningRoute: typeof PlanningRoute
   JobJobIdRoute: typeof JobJobIdRoute
   SupervisorNewRoute: typeof SupervisorNewRoute
+  SupervisorPlanningRoute: typeof SupervisorPlanningRoute
   SupervisorIndexRoute: typeof SupervisorIndexRoute
   JobJobIdReadyCheckRoute: typeof JobJobIdReadyCheckRoute
   JobJobIdReportRoute: typeof JobJobIdReportRoute
@@ -163,6 +189,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LandingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/planning': {
+      id: '/planning'
+      path: '/planning'
+      fullPath: '/planning'
+      preLoaderRoute: typeof PlanningRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/job/$jobId': {
       id: '/job/$jobId'
       path: '/job/$jobId'
@@ -182,6 +215,13 @@ declare module '@tanstack/react-router' {
       path: '/supervisor/new'
       fullPath: '/supervisor/new'
       preLoaderRoute: typeof SupervisorNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/supervisor/planning': {
+      id: '/supervisor/planning'
+      path: '/supervisor/planning'
+      fullPath: '/supervisor/planning'
+      preLoaderRoute: typeof SupervisorPlanningRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/job/$jobId_/ready-check': {
@@ -218,8 +258,10 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LandingRoute: LandingRoute,
+  PlanningRoute: PlanningRoute,
   JobJobIdRoute: JobJobIdRoute,
   SupervisorNewRoute: SupervisorNewRoute,
+  SupervisorPlanningRoute: SupervisorPlanningRoute,
   SupervisorIndexRoute: SupervisorIndexRoute,
   JobJobIdReadyCheckRoute: JobJobIdReadyCheckRoute,
   JobJobIdReportRoute: JobJobIdReportRoute,

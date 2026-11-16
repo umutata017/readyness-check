@@ -4,6 +4,7 @@ import {
   technicians,
   type CancelReason,
   type Job,
+  type JobFile,
   type PartOrderStatus,
   type UpdateEntry,
 } from "@/data/jobs";
@@ -11,13 +12,21 @@ import {
   cancelJob as storeCancelJob,
   createJob as storeCreateJob,
   createPartOrder,
+  deleteJobFile,
   setPartOrderStatus as storeSetPartOrderStatus,
+  uploadJobFile,
   editJob as storeEditJob,
   getJobs,
   latestOpenEntry,
   markJobUpdatesSeen,
   markJobReady,
+  markReportReviewed as storeMarkReportReviewed,
+  deleteReportPhoto as storeDeleteReportPhoto,
   openEntries,
+  getReports,
+  uploadReportPhoto as storeUploadReportPhoto,
+  saveReportDraft as storeSaveReportDraft,
+  submitReport as storeSubmitReport,
   updateRequiredItem,
   updateWorkspaceAvailability,
   reassignJob as storeReassignJob,
@@ -25,6 +34,8 @@ import {
   type JobChanges,
   type NewJobInput,
   type NewPartOrderInput,
+  type JobReport,
+  type ReportDraftInput,
 } from "@/data/store";
 
 const DEFAULT_TECHNICIAN_ID = "tech-a";
@@ -36,7 +47,9 @@ type TechnicianContextValue = {
   technicianId: string;
   setTechnicianId: (id: string) => void;
   jobs: Job[];
+  reports: JobReport[];
   getJob: (id: string) => Job | undefined;
+  getReport: (jobId: string) => JobReport | undefined;
   isUpdateSeen: (job: Job) => boolean;
   openUpdate: (job: Job) => UpdateEntry | undefined;
   markUpdateSeen: (jobId: string) => Promise<void>;
@@ -62,7 +75,19 @@ type TechnicianContextValue = {
   /** Returns the new order's number within the job (1 → "-P1"). */
   orderPart: (jobId: string, input: NewPartOrderInput) => Promise<number>;
   setPartOrderStatus: (orderId: string, status: PartOrderStatus) => Promise<void>;
+  uploadFile: (
+    jobId: string,
+    file: File,
+    uploadedBy: string,
+    kind?: JobFile["kind"],
+  ) => Promise<void>;
+  deleteFile: (file: JobFile) => Promise<void>;
   resetDemo: () => Promise<void>;
+  saveReportDraft: (input: ReportDraftInput) => Promise<JobReport>;
+  submitReport: (input: ReportDraftInput) => Promise<JobReport>;
+  markReportReviewed: (reportId: string) => Promise<void>;
+  uploadReportPhoto: (reportId: string, file: File) => Promise<JobReport["photos"][number]>;
+  deleteReportPhoto: (photoId: string) => Promise<void>;
 };
 
 const TechnicianContext = createContext<TechnicianContextValue | null>(null);
@@ -70,9 +95,14 @@ const TechnicianContext = createContext<TechnicianContextValue | null>(null);
 export function TechnicianProvider({ children }: { children: ReactNode }) {
   const [technicianId, setTechnicianId] = useState(DEFAULT_TECHNICIAN_ID);
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [reports, setReports] = useState<JobReport[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [backendError, setBackendError] = useState<string | null>(null);
   const loadVersion = useRef(0);
+  // After the first successful load, short network drops (a phone opening the
+  // camera, switching apps, losing signal) keep the current data on screen
+  // instead of replacing the app with "Backend unavailable".
+  const loadedOnce = useRef(false);
 
   async function loadJobs() {
     if (!supabaseConfigured) {
@@ -89,8 +119,10 @@ export function TechnicianProvider({ children }: { children: ReactNode }) {
       if (version !== loadVersion.current) return;
       setJobs(nextJobs);
       setBackendError(null);
+      loadedOnce.current = true;
     } catch (error) {
       if (version !== loadVersion.current) return;
+      if (loadedOnce.current) return; // keep showing the last data; the next reload catches up
       setBackendError(
         error instanceof Error ? error.message : "The Supabase backend could not be reached.",
       );
@@ -99,8 +131,20 @@ export function TechnicianProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function loadReports() {
+    if (!supabaseConfigured) return;
+    try {
+      setReports(await getReports());
+    } catch (error) {
+      setBackendError(
+        error instanceof Error ? error.message : "The report data could not be loaded.",
+      );
+    }
+  }
+
   useEffect(() => {
     void loadJobs();
+    void loadReports();
     if (!supabaseConfigured) return;
     const channel = supabase
       .channel("advantiq-demo-data")
@@ -129,14 +173,49 @@ export function TechnicianProvider({ children }: { children: ReactNode }) {
         { event: "*", schema: "public", table: "part_orders" },
         () => void loadJobs(),
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "job_files" },
+        () => void loadJobs(),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "reports" },
+        () => void loadReports(),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "report_problems" },
+        () => void loadReports(),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "report_materials" },
+        () => void loadReports(),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "report_photos" },
+        () => void loadReports(),
+      )
       .subscribe((status) => {
-        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-          setBackendError(
-            "Live updates could not be connected. Check that the Supabase project is running.",
-          );
+        // The client reconnects by itself after CHANNEL_ERROR / TIMED_OUT / CLOSED.
+        // Once it is back, reload so nothing that changed in between is missed.
+        if (status === "SUBSCRIBED" && loadedOnce.current) {
+          void loadJobs();
+          void loadReports();
         }
       });
+    const refresh = () => {
+      if (document.visibilityState !== "visible") return;
+      void loadJobs();
+      void loadReports();
+    };
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("online", refresh);
     return () => {
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("online", refresh);
       void supabase.removeChannel(channel);
     };
   }, []);
@@ -152,6 +231,17 @@ export function TechnicianProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function runReportMutation<T>(mutation: () => Promise<T>): Promise<T> {
+    try {
+      const result = await mutation();
+      await loadReports();
+      return result;
+    } catch (error) {
+      setBackendError(error instanceof Error ? error.message : "The report request failed.");
+      throw error;
+    }
+  }
+
   const value: TechnicianContextValue = {
     hydrated,
     backendError,
@@ -161,7 +251,9 @@ export function TechnicianProvider({ children }: { children: ReactNode }) {
       if (technicians.some((technician) => technician.id === id)) setTechnicianId(id);
     },
     jobs,
+    reports,
     getJob: (id) => jobs.find((job) => job.id === id),
+    getReport: (jobId) => reports.find((report) => report.jobId === jobId),
     isUpdateSeen: (job) => openEntries(job).length === 0,
     openUpdate: (job) => latestOpenEntry(job),
     markUpdateSeen: (jobId) => runMutation(() => markJobUpdatesSeen(jobId)),
@@ -194,7 +286,29 @@ export function TechnicianProvider({ children }: { children: ReactNode }) {
       await storeSetPartOrderStatus(orderId, status);
       await loadJobs();
     },
-    resetDemo: () => runMutation(storeResetDemoData),
+    // Like orders, file errors (too big, not set up) show next to the upload button.
+    uploadFile: async (jobId, file, uploadedBy, kind) => {
+      await uploadJobFile(jobId, file, uploadedBy, kind);
+      await loadJobs();
+    },
+    deleteFile: async (file) => {
+      await deleteJobFile(file);
+      await loadJobs();
+    },
+    resetDemo: async () => {
+      await runMutation(storeResetDemoData);
+      await loadReports();
+    },
+    saveReportDraft: (input) => runReportMutation(() => storeSaveReportDraft(input)),
+    submitReport: async (input) => {
+      const submitted = await runReportMutation(() => storeSubmitReport(input));
+      await loadJobs();
+      return submitted;
+    },
+    markReportReviewed: (reportId) => runReportMutation(() => storeMarkReportReviewed(reportId)),
+    uploadReportPhoto: (reportId, file) =>
+      runReportMutation(() => storeUploadReportPhoto(reportId, file)),
+    deleteReportPhoto: (photoId) => runReportMutation(() => storeDeleteReportPhoto(photoId)),
   };
 
   if (backendError && hydrated) {

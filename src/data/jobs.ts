@@ -56,6 +56,21 @@ export type PartOrder = {
   cancelledAt?: string | undefined;
 };
 
+/** A file attached to a job; the bytes live in Supabase Storage at `storagePath`. */
+export type JobFile = {
+  id: string;
+  kind: "file" | "photo"; // photos are shown as a gallery, other files as a list
+  name: string;
+  storagePath: string;
+  sizeBytes: number;
+  contentType?: string | undefined;
+  uploadedBy: string; // technician id or "supervisor"
+  createdAt: string;
+};
+
+/** Planned start and end of a job, as ISO timestamps. */
+export type JobSchedule = { start: string; end: string };
+
 /** Year-based job number, e.g. J26-0042 = the 42nd job created in 2026. */
 export type JobNumber = { year: number; sequence: number };
 export type Job = {
@@ -65,7 +80,8 @@ export type Job = {
   project: string;
   customer: string;
   address: string;
-  timeslot: string;
+  timeslot: string; // readable label; use jobTimeslot() to display, it prefers `schedule`
+  schedule?: JobSchedule | undefined; // missing until the schedule migration is applied
   jobType: string;
   status: JobStatus;
   tasks: Task[];
@@ -73,6 +89,7 @@ export type Job = {
   workspaceAvailable: boolean;
   history: UpdateEntry[];
   parts?: PartOrder[] | undefined; // empty until the part-orders migration is applied
+  files?: JobFile[] | undefined; // empty until the job-files migration is applied
   cancellation?: Cancellation | undefined; // set when a supervisor removes the job
 };
 export type Technician = { id: string; name: string };
@@ -113,6 +130,13 @@ export function jobNumberMeaning(job: Pick<Job, "number">): string | undefined {
 export const SUPERVISOR_PHONE = "+31612345678";
 
 export const JOB_TYPES = ["Heating", "Electrical", "Mechanical", "Welding"] as const;
+export const REPORT_PROBLEM_TAGS = [
+  "Wrong specification",
+  "Missing equipment",
+  "Workspace not free",
+  "Drawing outdated",
+  "Other",
+] as const;
 
 export const technicians: Technician[] = [
   { id: "tech-a", name: "Technician A" },

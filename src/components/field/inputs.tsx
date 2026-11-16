@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
+import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 import { FieldButton } from "./FieldButton";
 
@@ -13,6 +13,10 @@ export function FieldLabel({ children }: { children: ReactNode }) {
 
 export function TextInput({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={cn(fieldControlClass, className)} {...props} />;
+}
+
+export function TextArea({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return <textarea className={cn(fieldControlClass, "min-h-32 resize-y", className)} {...props} />;
 }
 
 export function FieldSelect({ className, children, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {

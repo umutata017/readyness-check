@@ -1,7 +1,7 @@
 ## Backend ownership
 
-This project is no longer managed through Lovable. Supabase is the project's
-backend and schema changes are made directly through the Supabase CLI using
+Supabase is the project's backend and schema changes are made directly through
+the Supabase CLI using
 versioned migrations in `supabase/migrations/`. Never commit service-role keys,
 database passwords, or other secrets.
 

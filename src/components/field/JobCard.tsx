@@ -7,10 +7,11 @@ import {
   openPartOrders,
   type Job,
 } from "@/data/jobs";
-import type { DisplayStatus } from "@/data/store";
+import type { DisplayStatus, ReportStatus } from "@/data/store";
+import { jobTimeslot } from "@/data/planning";
 import { cn } from "@/lib/utils";
 
-const statusLabel: Record<DisplayStatus, string> = {
+export const statusLabel: Record<DisplayStatus, string> = {
   cancelled: "Cancelled",
   updated: "Updated",
   "not-started": "Not started",
@@ -18,7 +19,7 @@ const statusLabel: Record<DisplayStatus, string> = {
   done: "Done",
 };
 
-const statusStyle: Record<DisplayStatus, string> = {
+export const statusStyle: Record<DisplayStatus, string> = {
   cancelled: "border border-cancel-border bg-card text-cancel-foreground",
   updated: "border border-change-border bg-change-soft text-change",
   "not-started": "border border-change-border/60 bg-pending text-change-foreground",
@@ -26,7 +27,17 @@ const statusStyle: Record<DisplayStatus, string> = {
   done: "border border-success bg-success text-success-foreground",
 };
 
-export function JobCard({ job, status, detailPath = "/job/$jobId" }: { job: Job; status: DisplayStatus; detailPath?: "/job/$jobId" | "/supervisor/job/$jobId" }) {
+export function JobCard({
+  job,
+  status,
+  reportStatus,
+  detailPath = "/job/$jobId",
+}: {
+  job: Job;
+  status: DisplayStatus;
+  reportStatus?: ReportStatus;
+  detailPath?: "/job/$jobId" | "/supervisor/job/$jobId";
+}) {
   const updated = status === "updated";
   const cancelled = status === "cancelled" && job.cancellation;
   return (
@@ -65,7 +76,7 @@ export function JobCard({ job, status, detailPath = "/job/$jobId" }: { job: Job;
       <div className="mt-3 space-y-1.5 text-base">
         <p className="flex items-center gap-2 font-semibold"><User className="size-4 shrink-0" />{job.customer}</p>
         <p className="flex items-center gap-2 font-medium"><MapPin className="size-4 shrink-0" />{job.address}</p>
-        <p className="flex items-center gap-2 font-bold"><Clock className="size-4 shrink-0" />{job.timeslot}</p>
+        <p className="flex items-center gap-2 font-bold"><Clock className="size-4 shrink-0" />{jobTimeslot(job)}</p>
       </div>
       <div className="mt-3 flex items-center justify-between gap-2 text-sm font-bold">
         <PartsSummary job={job} />
@@ -73,6 +84,11 @@ export function JobCard({ job, status, detailPath = "/job/$jobId" }: { job: Job;
           Open job <ChevronRight className="size-4" />
         </span>
       </div>
+      {detailPath === "/supervisor/job/$jobId" && (
+        <p className="mt-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+          Report: {reportStatus ?? "none"}
+        </p>
+      )}
     </Link>
   );
 }

@@ -4,6 +4,7 @@ import { AppShell } from "@/components/field/AppShell";
 import { FieldButton } from "@/components/field/FieldButton";
 import { JobForm } from "@/components/field/JobForm";
 import { jobCode } from "@/data/jobs";
+import { scheduleDraftFromJob } from "@/data/planning";
 import { useTechnician } from "@/state/technician";
 
 export const Route = createFileRoute("/supervisor/job/$jobId_/edit")({
@@ -49,7 +50,11 @@ function EditJob() {
       <JobForm
         key={job.id}
         editing
-        initial={{ ...job, tasks: job.tasks.map((task) => task.label) }}
+        initial={{
+          ...job,
+          schedule: scheduleDraftFromJob(job),
+          tasks: job.tasks.map((task) => task.label),
+        }}
         onSave={async (input, options) => {
           await editJob(jobId, input, options);
           await reassignJob(jobId, input.technicianId, options);

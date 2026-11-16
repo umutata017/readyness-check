@@ -10,7 +10,7 @@ export const emptyJobInput: NewJobInput = {
   project: "",
   customer: "",
   address: "",
-  timeslot: "",
+  schedule: { date: "", start: "08:00", end: "12:00" },
   jobType: "Heating",
   technicianId: "tech-a",
   tasks: [""],
@@ -57,11 +57,9 @@ export function JobForm({
   return (
     <form onSubmit={submit} className="space-y-5">
       <div className="grid gap-4 sm:grid-cols-2">
-        {(["project", "customer", "address", "timeslot"] as const).map((key) => (
+        {(["project", "customer", "address"] as const).map((key) => (
           <label key={key} className="min-w-0">
-            <FieldLabel>
-              {key === "timeslot" ? "Timeslot" : key.charAt(0).toUpperCase() + key.slice(1)}
-            </FieldLabel>
+            <FieldLabel>{key.charAt(0).toUpperCase() + key.slice(1)}</FieldLabel>
             <TextInput
               required
               value={draft[key]}
@@ -69,6 +67,49 @@ export function JobForm({
             />
           </label>
         ))}
+        <fieldset className="min-w-0 sm:col-span-2">
+          <legend className="contents">
+            <FieldLabel>Planned for</FieldLabel>
+          </legend>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
+            <label className="col-span-2 min-w-0 sm:col-span-1">
+              <span className="sr-only">Date</span>
+              <TextInput
+                type="date"
+                required
+                aria-label="Date"
+                value={draft.schedule.date}
+                onChange={(e) =>
+                  setDraft({ ...draft, schedule: { ...draft.schedule, date: e.target.value } })
+                }
+              />
+            </label>
+            <label className="min-w-0">
+              <span className="mb-1 block text-sm font-bold text-muted-foreground">From</span>
+              <TextInput
+                type="time"
+                required
+                step={900}
+                value={draft.schedule.start}
+                onChange={(e) =>
+                  setDraft({ ...draft, schedule: { ...draft.schedule, start: e.target.value } })
+                }
+              />
+            </label>
+            <label className="min-w-0">
+              <span className="mb-1 block text-sm font-bold text-muted-foreground">Until</span>
+              <TextInput
+                type="time"
+                required
+                step={900}
+                value={draft.schedule.end}
+                onChange={(e) =>
+                  setDraft({ ...draft, schedule: { ...draft.schedule, end: e.target.value } })
+                }
+              />
+            </label>
+          </div>
+        </fieldset>
         <label>
           <FieldLabel>Job type</FieldLabel>
           <FieldSelect

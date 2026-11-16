@@ -255,10 +255,7 @@ function yn(value: boolean): string {
 }
 
 export async function createJob(input: NewJobInput, at = new Date().toISOString()): Promise<Job> {
-  const jobs = await getJobs();
-  const id = nextJobId(jobs);
-  const { error: jobError } = await supabase.from("jobs").insert({
-    id,
+  const { data: createdRow, error: jobError } = await supabase.from("jobs").insert({
     technician_id: input.technicianId,
     project: input.project,
     customer: input.customer,
@@ -269,8 +266,10 @@ export async function createJob(input: NewJobInput, at = new Date().toISOString(
     workspace_available: input.workspaceAvailable,
     created_at: at,
     updated_at: at,
-  });
+  }).select("id").single();
   throwIfError(jobError);
+  const id = (createdRow as { id: string } | null)?.id;
+  if (!id) throw new Error("Supabase created the job but did not return its unique ID.");
 
   const tasks = input.tasks.filter(Boolean).map((label, position) => ({
     id: `${id}-t${position + 1}`,

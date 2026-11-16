@@ -6,6 +6,9 @@ import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
+  // Listen on the local network too, so phones on the same Wi-Fi can open the
+  // dev server (Vite prints the "Network:" link). Only affects `vite dev`.
+  server: { host: true },
   plugins: [
     tanstackStart({
       server: { entry: "server" },

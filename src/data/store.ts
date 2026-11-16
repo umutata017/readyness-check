@@ -17,6 +17,35 @@ export function displayStatus(job: Job, hasOpenUpdate: boolean): DisplayStatus {
   return job.status;
 }
 
+export type TechnicianJobFilters = {
+  search?: string;
+  status?: DisplayStatus | "all";
+  jobType?: string;
+  sort?: "default" | "project";
+};
+
+export function filterTechnicianJobs(
+  jobs: Job[],
+  hasOpenUpdate: (job: Job) => boolean,
+  filters: TechnicianJobFilters,
+): Job[] {
+  const search = filters.search?.trim().toLocaleLowerCase() ?? "";
+  const status = filters.status ?? "all";
+  const jobType = filters.jobType ?? "all";
+  const filtered = jobs.filter((job) => {
+    const display = displayStatus(job, hasOpenUpdate(job));
+    const searchable = `${job.id} ${job.project} ${job.customer} ${job.address}`.toLocaleLowerCase();
+    return (
+      (!search || searchable.includes(search)) &&
+      (status === "all" || display === status) &&
+      (jobType === "all" || job.jobType === jobType)
+    );
+  });
+
+  if (filters.sort !== "project") return filtered;
+  return [...filtered].sort((a, b) => a.project.localeCompare(b.project));
+}
+
 type JobRow = {
   id: string;
   technician_id: string;

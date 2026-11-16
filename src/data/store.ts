@@ -11,6 +11,45 @@ import {
 /** What a job card shows: cancellation wins over an unseen update, which wins over the stored status. */
 export type DisplayStatus = "cancelled" | "updated" | Job["status"];
 
+export type ReportStatus = "draft" | "submitted" | "reviewed";
+export type ReportProblem = { tag: string; note?: string };
+export type ReportMaterial = { name: string; used: boolean; isExtra: boolean };
+export type JobReport = {
+  id: string;
+  jobId: string;
+  technicianId: string;
+  notes: string;
+  nothingToReport: boolean;
+  problems: ReportProblem[];
+  materials: ReportMaterial[];
+  followUpNeeded: boolean;
+  followUpText?: string;
+  startedAt?: string;
+  endedAt?: string;
+  status: ReportStatus;
+  submittedAt?: string;
+  reviewedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ReportDraftInput = {
+  jobId: string;
+  technicianId: string;
+  notes: string;
+  nothingToReport: boolean;
+  problems: ReportProblem[];
+  materials: ReportMaterial[];
+  followUpNeeded: boolean;
+  followUpText?: string;
+  startedAt?: string;
+  endedAt?: string;
+};
+
+export function reportSubmissionReady(input: Pick<ReportDraftInput, "notes" | "nothingToReport">): boolean {
+  return Boolean(input.notes.trim() || input.nothingToReport);
+}
+
 export function displayStatus(job: Job, hasOpenUpdate: boolean): DisplayStatus {
   if (job.cancellation) return "cancelled";
   if (hasOpenUpdate) return "updated";
@@ -83,6 +122,31 @@ type UpdateRow = {
   notify: boolean;
   created_at: string;
   seen_at: string | null;
+};
+type ReportRow = {
+  id: string;
+  job_id: string;
+  technician_id: string;
+  notes: string;
+  nothing_to_report: boolean;
+  follow_up_needed: boolean;
+  follow_up_text: string | null;
+  started_at: string | null;
+  ended_at: string | null;
+  status: ReportStatus;
+  submitted_at: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+type ReportProblemRow = { id: string; report_id: string; tag: string; note: string | null };
+type ReportMaterialRow = {
+  id: string;
+  report_id: string;
+  name: string;
+  used: boolean;
+  is_extra: boolean;
+  position: number;
 };
 
 function throwIfError(error: { message: string } | null): void {
@@ -187,6 +251,148 @@ export async function getJobs(): Promise<Job[]> {
         (updatesResult.data ?? []) as UpdateRow[],
       ),
     );
+}
+
+function mapReport(
+  report: ReportRow,
+  problems: ReportProblemRow[],
+  materials: ReportMaterialRow[],
+): JobReport {
+  return {
+    id: report.id,
+    jobId: report.job_id,
+    technicianId: report.technician_id,
+    notes: report.notes,
+    nothingToReport: report.nothing_to_report,
+    problems: problems
+      .filter((problem) => problem.report_id === report.id)
+      .map((problem) => ({ tag: problem.tag, note: problem.note ?? undefined })),
+    materials: materials
+      .filter((material) => material.report_id === report.id)
+      .sort((a, b) => a.position - b.position)
+      .map((material) => ({
+        name: material.name,
+        used: material.used,
+        isExtra: material.is_extra,
+      })),
+    followUpNeeded: report.follow_up_needed,
+    followUpText: report.follow_up_text ?? undefined,
+    startedAt: report.started_at ?? undefined,
+    endedAt: report.ended_at ?? undefined,
+    status: report.status,
+    submittedAt: report.submitted_at ?? undefined,
+    reviewedAt: report.reviewed_at ?? undefined,
+    createdAt: report.created_at,
+    updatedAt: report.updated_at,
+  };
+}
+
+export async function getReports(): Promise<JobReport[]> {
+  const [reportsResult, problemsResult, materialsResult] = await Promise.all([
+    supabase.from("reports").select("*"),
+    supabase.from("report_problems").select("*"),
+    supabase.from("report_materials").select("*"),
+  ]);
+  throwIfError(reportsResult.error);
+  throwIfError(problemsResult.error);
+  throwIfError(materialsResult.error);
+  return ((reportsResult.data ?? []) as ReportRow[]).map((report) =>
+    mapReport(
+      report,
+      (problemsResult.data ?? []) as ReportProblemRow[],
+      (materialsResult.data ?? []) as ReportMaterialRow[],
+    ),
+  );
+}
+
+export async function getReportForJob(jobId: string): Promise<JobReport | undefined> {
+  return (await getReports()).find((report) => report.jobId === jobId);
+}
+
+function reportRows(input: ReportDraftInput, reportId: string) {
+  return {
+    problems: input.problems
+      .filter((problem) => problem.tag.trim())
+      .map((problem) => ({ report_id: reportId, tag: problem.tag.trim(), note: problem.note?.trim() || null })),
+    materials: input.materials
+      .filter((material) => material.name.trim())
+      .map((material, position) => ({
+        report_id: reportId,
+        name: material.name.trim(),
+        used: material.used,
+        is_extra: material.isExtra,
+        position: position + 1,
+      })),
+  };
+}
+
+export async function saveReportDraft(input: ReportDraftInput): Promise<JobReport> {
+  const existing = await getReportForJob(input.jobId);
+  if (existing && existing.status !== "draft") {
+    throw new Error("This report has already been submitted and is read-only.");
+  }
+  const { data: reportRow, error: reportError } = await supabase
+    .from("reports")
+    .upsert(
+      {
+        id: existing?.id,
+        job_id: input.jobId,
+        technician_id: input.technicianId,
+        notes: input.notes,
+        nothing_to_report: input.nothingToReport,
+        follow_up_needed: input.followUpNeeded,
+        follow_up_text: input.followUpText?.trim() || null,
+        started_at: input.startedAt || null,
+        ended_at: input.endedAt || null,
+        status: "draft",
+      },
+      { onConflict: "job_id" },
+    )
+    .select("*")
+    .single();
+  throwIfError(reportError);
+  if (!reportRow) throw new Error("The report draft was not returned by Supabase.");
+  const rows = reportRows(input, (reportRow as ReportRow).id);
+  throwIfError((await supabase.from("report_problems").delete().eq("report_id", (reportRow as ReportRow).id)).error);
+  throwIfError((await supabase.from("report_materials").delete().eq("report_id", (reportRow as ReportRow).id)).error);
+  if (rows.problems.length) throwIfError((await supabase.from("report_problems").insert(rows.problems)).error);
+  if (rows.materials.length) throwIfError((await supabase.from("report_materials").insert(rows.materials)).error);
+  const saved = await getReportForJob(input.jobId);
+  if (!saved) throw new Error("The report draft was saved but could not be loaded.");
+  return saved;
+}
+
+export async function submitReport(input: ReportDraftInput): Promise<JobReport> {
+  if (!reportSubmissionReady(input)) {
+    throw new Error("Add a report note or select Nothing to report before submitting.");
+  }
+  const draft = await saveReportDraft(input);
+  const submittedAt = new Date().toISOString();
+  const { error: reportError } = await supabase
+    .from("reports")
+    .update({ status: "submitted", submitted_at: submittedAt })
+    .eq("id", draft.id);
+  throwIfError(reportError);
+  const { error: jobError } = await supabase
+    .from("jobs")
+    .update({ status: "done" })
+    .eq("id", input.jobId);
+  throwIfError(jobError);
+  const submitted = await getReportForJob(input.jobId);
+  if (!submitted) throw new Error("The report was submitted but could not be loaded.");
+  return submitted;
+}
+
+export async function markReportReviewed(reportId: string): Promise<void> {
+  const { data, error } = await supabase
+    .from("reports")
+    .update({ status: "reviewed", reviewed_at: new Date().toISOString() })
+    .eq("id", reportId)
+    .eq("status", "submitted")
+    .select("id")
+    .maybeSingle();
+  throwIfError(error);
+  if (!data) throw new Error("Only a submitted report can be marked as reviewed.");
 }
 
 export function nextJobId(jobs: Job[]): string {

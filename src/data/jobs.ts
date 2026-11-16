@@ -54,6 +54,13 @@ export type Technician = { id: string; name: string };
 export const SUPERVISOR_PHONE = "+31612345678";
 
 export const JOB_TYPES = ["Heating", "Electrical", "Mechanical", "Welding"] as const;
+export const REPORT_PROBLEM_TAGS = [
+  "Wrong specification",
+  "Missing equipment",
+  "Workspace not free",
+  "Drawing outdated",
+  "Other",
+] as const;
 
 export const technicians: Technician[] = [
   { id: "tech-a", name: "Technician A" },

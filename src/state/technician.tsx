@@ -9,13 +9,19 @@ import {
   latestOpenEntry,
   markJobUpdatesSeen,
   markJobReady,
+  markReportReviewed as storeMarkReportReviewed,
   openEntries,
+  getReports,
+  saveReportDraft as storeSaveReportDraft,
+  submitReport as storeSubmitReport,
   updateRequiredItem,
   updateWorkspaceAvailability,
   reassignJob as storeReassignJob,
   resetDemoData as storeResetDemoData,
   type JobChanges,
   type NewJobInput,
+  type JobReport,
+  type ReportDraftInput,
 } from "@/data/store";
 
 const DEFAULT_TECHNICIAN_ID = "tech-a";
@@ -27,7 +33,9 @@ type TechnicianContextValue = {
   technicianId: string;
   setTechnicianId: (id: string) => void;
   jobs: Job[];
+  reports: JobReport[];
   getJob: (id: string) => Job | undefined;
+  getReport: (jobId: string) => JobReport | undefined;
   isUpdateSeen: (job: Job) => boolean;
   openUpdate: (job: Job) => UpdateEntry | undefined;
   markUpdateSeen: (jobId: string) => Promise<void>;
@@ -51,6 +59,9 @@ type TechnicianContextValue = {
   ) => Promise<void>;
   cancelJob: (id: string, reason: CancelReason, note?: string) => Promise<void>;
   resetDemo: () => Promise<void>;
+  saveReportDraft: (input: ReportDraftInput) => Promise<JobReport>;
+  submitReport: (input: ReportDraftInput) => Promise<JobReport>;
+  markReportReviewed: (reportId: string) => Promise<void>;
 };
 
 const TechnicianContext = createContext<TechnicianContextValue | null>(null);
@@ -58,6 +69,7 @@ const TechnicianContext = createContext<TechnicianContextValue | null>(null);
 export function TechnicianProvider({ children }: { children: ReactNode }) {
   const [technicianId, setTechnicianId] = useState(DEFAULT_TECHNICIAN_ID);
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [reports, setReports] = useState<JobReport[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [backendError, setBackendError] = useState<string | null>(null);
   const loadVersion = useRef(0);
@@ -87,8 +99,20 @@ export function TechnicianProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function loadReports() {
+    if (!supabaseConfigured) return;
+    try {
+      setReports(await getReports());
+    } catch (error) {
+      setBackendError(
+        error instanceof Error ? error.message : "The report data could not be loaded.",
+      );
+    }
+  }
+
   useEffect(() => {
     void loadJobs();
+    void loadReports();
     if (!supabaseConfigured) return;
     const channel = supabase
       .channel("advantiq-demo-data")
@@ -111,6 +135,21 @@ export function TechnicianProvider({ children }: { children: ReactNode }) {
         "postgres_changes",
         { event: "*", schema: "public", table: "job_updates" },
         () => void loadJobs(),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "reports" },
+        () => void loadReports(),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "report_problems" },
+        () => void loadReports(),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "report_materials" },
+        () => void loadReports(),
       )
       .subscribe((status) => {
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
@@ -135,6 +174,17 @@ export function TechnicianProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function runReportMutation<T>(mutation: () => Promise<T>): Promise<T> {
+    try {
+      const result = await mutation();
+      await loadReports();
+      return result;
+    } catch (error) {
+      setBackendError(error instanceof Error ? error.message : "The report request failed.");
+      throw error;
+    }
+  }
+
   const value: TechnicianContextValue = {
     hydrated,
     backendError,
@@ -144,7 +194,9 @@ export function TechnicianProvider({ children }: { children: ReactNode }) {
       if (technicians.some((technician) => technician.id === id)) setTechnicianId(id);
     },
     jobs,
+    reports,
     getJob: (id) => jobs.find((job) => job.id === id),
+    getReport: (jobId) => reports.find((report) => report.jobId === jobId),
     isUpdateSeen: (job) => openEntries(job).length === 0,
     openUpdate: (job) => latestOpenEntry(job),
     markUpdateSeen: (jobId) => runMutation(() => markJobUpdatesSeen(jobId)),
@@ -167,7 +219,17 @@ export function TechnicianProvider({ children }: { children: ReactNode }) {
     reassignJob: (id, technicianId, opts) =>
       runMutation(() => storeReassignJob(id, technicianId, opts)),
     cancelJob: (id, reason, note) => runMutation(() => storeCancelJob(id, reason, note)),
-    resetDemo: () => runMutation(storeResetDemoData),
+    resetDemo: async () => {
+      await runMutation(storeResetDemoData);
+      await loadReports();
+    },
+    saveReportDraft: (input) => runReportMutation(() => storeSaveReportDraft(input)),
+    submitReport: async (input) => {
+      const submitted = await runReportMutation(() => storeSubmitReport(input));
+      await loadJobs();
+      return submitted;
+    },
+    markReportReviewed: (reportId) => runReportMutation(() => storeMarkReportReviewed(reportId)),
   };
 
   if (backendError && hydrated) {

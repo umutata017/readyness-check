@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { AlertTriangle, ChevronRight, Clock, MapPin, User, XCircle } from "lucide-react";
 import { CANCEL_REASON_LABELS, type Job } from "@/data/jobs";
-import type { DisplayStatus } from "@/data/store";
+import type { DisplayStatus, ReportStatus } from "@/data/store";
 import { cn } from "@/lib/utils";
 
 const statusLabel: Record<DisplayStatus, string> = {
@@ -20,7 +20,17 @@ const statusStyle: Record<DisplayStatus, string> = {
   done: "border border-success bg-success text-success-foreground",
 };
 
-export function JobCard({ job, status, detailPath = "/job/$jobId" }: { job: Job; status: DisplayStatus; detailPath?: "/job/$jobId" | "/supervisor/job/$jobId" }) {
+export function JobCard({
+  job,
+  status,
+  reportStatus,
+  detailPath = "/job/$jobId",
+}: {
+  job: Job;
+  status: DisplayStatus;
+  reportStatus?: ReportStatus;
+  detailPath?: "/job/$jobId" | "/supervisor/job/$jobId";
+}) {
   const updated = status === "updated";
   const cancelled = status === "cancelled" && job.cancellation;
   return (
@@ -58,6 +68,11 @@ export function JobCard({ job, status, detailPath = "/job/$jobId" }: { job: Job;
       <div className="mt-3 flex items-center justify-end gap-1 text-sm font-bold">
         Open job <ChevronRight className="size-4" />
       </div>
+      {detailPath === "/supervisor/job/$jobId" && (
+        <p className="mt-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+          Report: {reportStatus ?? "none"}
+        </p>
+      )}
     </Link>
   );
 }

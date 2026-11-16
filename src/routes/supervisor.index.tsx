@@ -31,7 +31,7 @@ export const Route = createFileRoute("/supervisor/")({
 });
 
 function SupervisorJobs() {
-  const { jobs, openUpdate, resetDemo } = useTechnician();
+  const { jobs, openUpdate, getReport, resetDemo } = useTechnician();
   const [search, setSearch] = useState("");
   const [technician, setTechnician] = useState("all");
   const [status, setStatus] = useState("all");
@@ -135,6 +135,7 @@ function SupervisorJobs() {
             key={job.id}
             job={job}
             status={displayStatus(job, Boolean(openUpdate(job)))}
+            reportStatus={getReport(job.id)?.status}
             detailPath="/supervisor/job/$jobId"
           />
         ))}

@@ -1,5 +1,5 @@
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
-import { ArrowLeft, CheckCircle2, Mic, Plus, Save, Send, X } from "lucide-react";
+import { ArrowLeft, Camera, CheckCircle2, Mic, Plus, Save, Send, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AppShell } from "@/components/field/AppShell";
 import { FieldButton } from "@/components/field/FieldButton";
@@ -60,6 +60,8 @@ function ReportScreen() {
     getReport,
     saveReportDraft,
     submitReport,
+    uploadReportPhoto,
+    deleteReportPhoto,
   } = useTechnician();
   const job = getJob(jobId);
   const report = getReport(jobId);
@@ -68,8 +70,11 @@ function ReportScreen() {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [submitConfirm, setSubmitConfirm] = useState(false);
   const [submittedReport, setSubmittedReport] = useState<JobReport>();
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const saveVersion = useRef(0);
   const autosaveTimer = useRef<number | undefined>(undefined);
+  const photoInput = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (job && form === null && hydrated) setForm(draftForJob(job, report));
@@ -79,6 +84,7 @@ function ReportScreen() {
   const canEdit = job?.technicianId === technicianId && !job?.cancellation;
   const canSubmit = Boolean(form && reportSubmissionReady(form));
   const reportStatus = submittedReport?.status ?? report?.status;
+  const photos = submittedReport?.photos ?? report?.photos ?? [];
   const dateLabel = useMemo(() => new Date().toLocaleDateString("en-GB"), []);
 
   async function saveDraft(nextForm = form) {
@@ -161,6 +167,37 @@ function ReportScreen() {
       materials: [...current.materials, { name, used: false, isExtra: true }],
     }));
     setExtraMaterial("");
+  }
+
+  async function addPhotos(files: FileList | null) {
+    if (!files || !form) return;
+    setPhotoBusy(true);
+    setPhotoError(null);
+    try {
+      const draft = report?.status === "draft" ? report : await saveReportDraft(form);
+      const remaining = 5 - draft.photos.length;
+      if (files.length > remaining) {
+        throw new Error(`You can add ${remaining} more photo${remaining === 1 ? "" : "s"}.`);
+      }
+      for (const file of Array.from(files)) await uploadReportPhoto(draft.id, file);
+    } catch (error) {
+      setPhotoError(error instanceof Error ? error.message : "The photos could not be uploaded.");
+    } finally {
+      setPhotoBusy(false);
+      if (photoInput.current) photoInput.current.value = "";
+    }
+  }
+
+  async function removePhoto(photoId: string) {
+    setPhotoBusy(true);
+    setPhotoError(null);
+    try {
+      await deleteReportPhoto(photoId);
+    } catch (error) {
+      setPhotoError(error instanceof Error ? error.message : "The photo could not be removed.");
+    } finally {
+      setPhotoBusy(false);
+    }
   }
 
   return (
@@ -266,6 +303,57 @@ function ReportScreen() {
               <Plus className="size-5" /> Add
             </FieldButton>
           </div>
+        </section>
+
+        <section className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <FieldLabel>Photos</FieldLabel>
+            <span className="text-sm font-bold text-muted-foreground">{photos.length}/5</span>
+          </div>
+          {photos.length > 0 && (
+            <div className="grid grid-cols-3 gap-2">
+              {photos.map((photo) => (
+                <div key={photo.id} className="relative aspect-square overflow-hidden rounded-2xl border border-border bg-muted">
+                  <img src={photo.url} alt="Report attachment" className="size-full object-cover" />
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      aria-label="Remove photo"
+                      className="absolute right-1 top-1 grid size-9 place-items-center rounded-full bg-foreground/80 text-background"
+                      onClick={() => void removePhoto(photo.id)}
+                      disabled={photoBusy}
+                    >
+                      <X className="size-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {!readOnly && photos.length < 5 && (
+            <>
+              <input
+                ref={photoInput}
+                className="hidden"
+                type="file"
+                accept="image/*"
+                capture="environment"
+                multiple
+                onChange={(event) => void addPhotos(event.target.files)}
+              />
+              <FieldButton
+                type="button"
+                variant="tile"
+                className="flex-row"
+                onClick={() => photoInput.current?.click()}
+                disabled={photoBusy}
+              >
+                <Camera className="size-5" /> {photoBusy ? "Uploading…" : "Add photo"}
+              </FieldButton>
+            </>
+          )}
+          {photoError && <p className="text-sm font-bold text-destructive">{photoError}</p>}
+          <p className="text-sm text-muted-foreground">Photos are resized before upload. Maximum five.</p>
         </section>
 
         <section className="space-y-3">

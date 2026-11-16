@@ -10,8 +10,10 @@ import {
   markJobUpdatesSeen,
   markJobReady,
   markReportReviewed as storeMarkReportReviewed,
+  deleteReportPhoto as storeDeleteReportPhoto,
   openEntries,
   getReports,
+  uploadReportPhoto as storeUploadReportPhoto,
   saveReportDraft as storeSaveReportDraft,
   submitReport as storeSubmitReport,
   updateRequiredItem,
@@ -62,6 +64,8 @@ type TechnicianContextValue = {
   saveReportDraft: (input: ReportDraftInput) => Promise<JobReport>;
   submitReport: (input: ReportDraftInput) => Promise<JobReport>;
   markReportReviewed: (reportId: string) => Promise<void>;
+  uploadReportPhoto: (reportId: string, file: File) => Promise<JobReport["photos"][number]>;
+  deleteReportPhoto: (photoId: string) => Promise<void>;
 };
 
 const TechnicianContext = createContext<TechnicianContextValue | null>(null);
@@ -151,6 +155,11 @@ export function TechnicianProvider({ children }: { children: ReactNode }) {
         { event: "*", schema: "public", table: "report_materials" },
         () => void loadReports(),
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "report_photos" },
+        () => void loadReports(),
+      )
       .subscribe((status) => {
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
           setBackendError(
@@ -230,6 +239,9 @@ export function TechnicianProvider({ children }: { children: ReactNode }) {
       return submitted;
     },
     markReportReviewed: (reportId) => runReportMutation(() => storeMarkReportReviewed(reportId)),
+    uploadReportPhoto: (reportId, file) =>
+      runReportMutation(() => storeUploadReportPhoto(reportId, file)),
+    deleteReportPhoto: (photoId) => runReportMutation(() => storeDeleteReportPhoto(photoId)),
   };
 
   if (backendError && hydrated) {

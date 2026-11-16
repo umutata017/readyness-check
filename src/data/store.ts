@@ -14,6 +14,7 @@ export type DisplayStatus = "cancelled" | "updated" | Job["status"];
 export type ReportStatus = "draft" | "submitted" | "reviewed";
 export type ReportProblem = { tag: string; note?: string };
 export type ReportMaterial = { name: string; used: boolean; isExtra: boolean };
+export type ReportPhoto = { id: string; storagePath: string; url: string; createdAt: string };
 export type JobReport = {
   id: string;
   jobId: string;
@@ -22,6 +23,7 @@ export type JobReport = {
   nothingToReport: boolean;
   problems: ReportProblem[];
   materials: ReportMaterial[];
+  photos: ReportPhoto[];
   followUpNeeded: boolean;
   followUpText?: string;
   startedAt?: string;
@@ -148,9 +150,33 @@ type ReportMaterialRow = {
   is_extra: boolean;
   position: number;
 };
+type ReportPhotoRow = {
+  id: string;
+  report_id: string;
+  storage_path: string;
+  content_type: string;
+  size_bytes: number;
+  created_at: string;
+};
+
+const REPORT_PHOTO_BUCKET = "report-photos";
 
 function throwIfError(error: { message: string } | null): void {
   if (error) throw new Error(error.message);
+}
+
+function createPhotoStorageId(): string {
+  const bytes = new Uint8Array(16);
+  if (globalThis.crypto?.getRandomValues) {
+    globalThis.crypto.getRandomValues(bytes);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random()
+    .toString(36)
+    .slice(2)}`;
 }
 
 function localChildId(databaseId: string): string {
@@ -257,6 +283,8 @@ function mapReport(
   report: ReportRow,
   problems: ReportProblemRow[],
   materials: ReportMaterialRow[],
+  photos: ReportPhotoRow[],
+  photoUrls: Map<string, string>,
 ): JobReport {
   return {
     id: report.id,
@@ -275,6 +303,14 @@ function mapReport(
         used: material.used,
         isExtra: material.is_extra,
       })),
+    photos: photos
+      .filter((photo) => photo.report_id === report.id)
+      .map((photo) => ({
+        id: photo.id,
+        storagePath: photo.storage_path,
+        url: photoUrls.get(photo.id) ?? "",
+        createdAt: photo.created_at,
+      })),
     followUpNeeded: report.follow_up_needed,
     followUpText: report.follow_up_text ?? undefined,
     startedAt: report.started_at ?? undefined,
@@ -288,19 +324,37 @@ function mapReport(
 }
 
 export async function getReports(): Promise<JobReport[]> {
-  const [reportsResult, problemsResult, materialsResult] = await Promise.all([
+  const [reportsResult, problemsResult, materialsResult, photosResult] = await Promise.all([
     supabase.from("reports").select("*"),
     supabase.from("report_problems").select("*"),
     supabase.from("report_materials").select("*"),
+    supabase.from("report_photos").select("*").order("created_at"),
   ]);
   throwIfError(reportsResult.error);
   throwIfError(problemsResult.error);
   throwIfError(materialsResult.error);
-  return ((reportsResult.data ?? []) as ReportRow[]).map((report) =>
-    mapReport(
-      report,
-      (problemsResult.data ?? []) as ReportProblemRow[],
-      (materialsResult.data ?? []) as ReportMaterialRow[],
+  throwIfError(photosResult.error);
+  const photoRows = (photosResult.data ?? []) as ReportPhotoRow[];
+  const photoUrls = new Map<string, string>();
+  await Promise.all(
+    photoRows.map(async (photo) => {
+      const { data, error } = await supabase.storage
+        .from(REPORT_PHOTO_BUCKET)
+        .createSignedUrl(photo.storage_path, 3600);
+      throwIfError(error);
+      if (!data?.signedUrl) throw new Error(`Photo ${photo.id} did not return a signed URL.`);
+      photoUrls.set(photo.id, data.signedUrl);
+    }),
+  );
+  return Promise.all(
+    ((reportsResult.data ?? []) as ReportRow[]).map((report) =>
+      mapReport(
+        report,
+        (problemsResult.data ?? []) as ReportProblemRow[],
+        (materialsResult.data ?? []) as ReportMaterialRow[],
+        photoRows,
+        photoUrls,
+      ),
     ),
   );
 }
@@ -393,6 +447,129 @@ export async function markReportReviewed(reportId: string): Promise<void> {
     .maybeSingle();
   throwIfError(error);
   if (!data) throw new Error("Only a submitted report can be marked as reviewed.");
+}
+
+async function resizeReportPhoto(file: File): Promise<Blob> {
+  if (!file.type.startsWith("image/")) throw new Error("Only image files can be added to a report.");
+  const sourceUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const element = new Image();
+      element.onload = () => resolve(element);
+      element.onerror = () => reject(new Error("The selected image could not be read."));
+      element.src = sourceUrl;
+    });
+    const scale = Math.min(1, 1600 / Math.max(image.naturalWidth, image.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("The browser could not prepare the selected image.");
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => (blob ? resolve(blob) : reject(new Error("The selected image could not be resized."))),
+        "image/jpeg",
+        0.82,
+      );
+    });
+  } finally {
+    URL.revokeObjectURL(sourceUrl);
+  }
+}
+
+export async function uploadReportPhoto(reportId: string, file: File): Promise<ReportPhoto> {
+  const { data: report, error: reportError } = await supabase
+    .from("reports")
+    .select("status")
+    .eq("id", reportId)
+    .single();
+  throwIfError(reportError);
+  if (report?.status !== "draft") throw new Error("Photos can only be added to a draft report.");
+
+  const { count, error: countError } = await supabase
+    .from("report_photos")
+    .select("id", { count: "exact", head: true })
+    .eq("report_id", reportId);
+  throwIfError(countError);
+  if ((count ?? 0) >= 5) throw new Error("A report can contain at most five photos.");
+
+  const resized = await resizeReportPhoto(file);
+  const storagePath = `${reportId}/${createPhotoStorageId()}.jpg`;
+  const { error: uploadError } = await supabase.storage
+    .from(REPORT_PHOTO_BUCKET)
+    .upload(storagePath, resized, { contentType: "image/jpeg", upsert: false });
+  throwIfError(uploadError);
+
+  const { data: photoRow, error: photoError } = await supabase
+    .from("report_photos")
+    .insert({
+      report_id: reportId,
+      storage_path: storagePath,
+      content_type: "image/jpeg",
+      size_bytes: resized.size,
+    })
+    .select("*")
+    .single();
+  if (photoError) {
+    const cleanup = await supabase.storage.from(REPORT_PHOTO_BUCKET).remove([storagePath]);
+    if (cleanup.error) {
+      throw new Error(`${photoError.message} Photo cleanup also failed: ${cleanup.error.message}`);
+    }
+    throw new Error(photoError.message);
+  }
+  const { data: signed, error: signedError } = await supabase.storage
+    .from(REPORT_PHOTO_BUCKET)
+    .createSignedUrl(storagePath, 3600);
+  throwIfError(signedError);
+  if (!signed?.signedUrl) throw new Error("The uploaded photo did not return a signed URL.");
+  const saved = photoRow as ReportPhotoRow;
+  return {
+    id: saved.id,
+    storagePath: saved.storage_path,
+    url: signed.signedUrl,
+    createdAt: saved.created_at,
+  };
+}
+
+export async function deleteReportPhoto(photoId: string): Promise<void> {
+  const { data: photo, error: photoError } = await supabase
+    .from("report_photos")
+    .select("storage_path")
+    .eq("id", photoId)
+    .single();
+  throwIfError(photoError);
+  if (!photo) throw new Error("The report photo could not be found.");
+  const storagePath = (photo as { storage_path: string }).storage_path;
+  throwIfError((await supabase.storage.from(REPORT_PHOTO_BUCKET).remove([storagePath])).error);
+  throwIfError((await supabase.from("report_photos").delete().eq("id", photoId)).error);
+}
+
+async function removeAllReportPhotoObjects(): Promise<void> {
+  const { data: entries, error: listError } = await supabase.storage
+    .from(REPORT_PHOTO_BUCKET)
+    .list("", { limit: 1000 });
+  throwIfError(listError);
+
+  const paths: string[] = [];
+  for (const entry of entries ?? []) {
+    if (entry.id) {
+      paths.push(entry.name);
+      continue;
+    }
+
+    const { data: nestedEntries, error: nestedListError } = await supabase.storage
+      .from(REPORT_PHOTO_BUCKET)
+      .list(entry.name, { limit: 1000 });
+    throwIfError(nestedListError);
+    for (const nestedEntry of nestedEntries ?? []) {
+      if (nestedEntry.id) paths.push(`${entry.name}/${nestedEntry.name}`);
+    }
+  }
+
+  if (paths.length > 0) {
+    throwIfError((await supabase.storage.from(REPORT_PHOTO_BUCKET).remove(paths)).error);
+  }
 }
 
 export function nextJobId(jobs: Job[]): string {
@@ -792,5 +969,6 @@ export async function markJobReady(id: string, at = new Date().toISOString()): P
 }
 
 export async function resetDemoData(): Promise<void> {
+  await removeAllReportPhotoObjects();
   throwIfError((await supabase.rpc("reset_demo_data")).error);
 }

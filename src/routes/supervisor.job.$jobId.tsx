@@ -68,6 +68,14 @@ function SupervisorJob() {
               </ul>
             </div>
           )}
+          {report.photos.length > 0 && (
+            <div>
+              <p className="text-sm font-bold text-muted-foreground">Photos</p>
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                {report.photos.map((photo) => <img key={photo.id} src={photo.url} alt="Report attachment" className="aspect-square rounded-xl object-cover" />)}
+              </div>
+            </div>
+          )}
           {report.followUpNeeded && <p className="font-semibold">Follow-up: {report.followUpText || "Needed"}</p>}
           {(report.startedAt || report.endedAt) && <p className="font-semibold">Time: {report.startedAt || "—"} to {report.endedAt || "—"}</p>}
           <p className="text-sm text-muted-foreground">
